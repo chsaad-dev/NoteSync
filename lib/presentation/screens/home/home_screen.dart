@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:notesync/core/di/injection_container.dart';
-import '../../core/utils/quill_helper.dart';
-import '../../domain/entities/note_entity.dart';
+import '../../../core/utils/quill_helper.dart';
+import '../../../domain/entities/note_entity.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/sync_provider.dart';
@@ -292,7 +292,7 @@ class HomeScreen extends ConsumerWidget {
       },
       borderRadius: BorderRadius.circular(16),
       child: Card(
-        margin: EdgeInsets.none,
+        margin: EdgeInsets.zero,
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(

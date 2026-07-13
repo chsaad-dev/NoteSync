@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:isar/isar.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../data/local/models/isar_note_model.dart';
@@ -48,10 +49,10 @@ Future<void> init({
   if (testingIsar != null) {
     isar = testingIsar;
   } else {
-    final dir = await getApplicationDocumentsDirectory();
+    final String? path = kIsWeb ? null : (await getApplicationDocumentsDirectory()).path;
     isar = await Isar.open(
       [IsarNoteModelSchema],
-      directory: dir.path,
+      directory: path,
     );
   }
   if (!sl.isRegistered<Isar>()) {

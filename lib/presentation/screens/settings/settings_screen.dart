@@ -4,8 +4,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/biometric_provider.dart';
 import '../../providers/sync_provider.dart';
-import '../../core/di/injection_container.dart';
-import '../../domain/usecases/delete_account.dart';
+import '../../../core/di/injection_container.dart';
+import '../../../domain/usecases/delete_account.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -133,7 +133,7 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: const Text('Toggle between dark and light themes'),
                   trailing: Switch(
                     value: themeMode == ThemeMode.dark,
-                    onPressed: (_) => ref.read(themeProvider.notifier).toggleTheme(),
+                    onChanged: (_) => ref.read(themeProvider.notifier).toggleTheme(),
                   ),
                 ),
                 const Divider(height: 1),
@@ -143,7 +143,7 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: const Text('Protect notes with fingerprint or PIN lock'),
                   trailing: Switch(
                     value: biometricState.isEnabled,
-                    onPressed: (val) => ref.read(biometricProvider.notifier).toggleBiometric(val),
+                    onChanged: (val) => ref.read(biometricProvider.notifier).toggleBiometric(val),
                   ),
                 ),
               ],

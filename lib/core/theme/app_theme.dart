@@ -14,7 +14,7 @@ class AppTheme {
         surface: Colors.white,
       ),
       scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -64,11 +64,11 @@ class AppTheme {
         surface: const Color(0xFF1E293B), // Slate 800
       ),
       scaffoldBackgroundColor: const Color(0xFF0F172A),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.slate.shade700.withOpacity(0.3)),
+          side: BorderSide(color: const Color(0xFF334155).withOpacity(0.3)),
         ),
         color: const Color(0xFF1E293B),
       ),

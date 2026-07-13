@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/utils/quill_helper.dart';
-import '../../domain/entities/note_entity.dart';
+import '../../../core/utils/quill_helper.dart';
+import '../../../domain/entities/note_entity.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/editor_provider.dart';
 import '../note_editor/note_editor_screen.dart';
-import '../../core/di/injection_container.dart';
-import '../../domain/repository/note_repository.dart';
+import '../../../core/di/injection_container.dart';
+import '../../../domain/repository/note_repository.dart';
 
 class TrashScreen extends ConsumerWidget {
   const TrashScreen({super.key});

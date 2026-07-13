@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../domain/entities/note_entity.dart';
+import '../../../domain/entities/note_entity.dart';
 import '../../providers/editor_provider.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
@@ -306,9 +306,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                   ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 300),
                     child: QuillEditor.basic(
-                      configurations: QuillEditorConfigurations(
-                        controller: _quillController!,
-                        readOnly: false,
+                      controller: _quillController!,
+                      config: const QuillEditorConfig(
                         placeholder: 'Start writing your note...',
                         expands: false,
                         padding: EdgeInsets.zero,
@@ -329,9 +328,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Quill toolbar
-                  QuillToolbar.simple(
-                    configurations: QuillSimpleToolbarConfigurations(
-                      controller: _quillController!,
+                  QuillSimpleToolbar(
+                    controller: _quillController!,
+                    config: const QuillSimpleToolbarConfig(
                       showAlignmentButtons: false,
                       showFontFamily: false,
                       showFontSize: false,

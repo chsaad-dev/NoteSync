@@ -9,10 +9,8 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_auth
   firebase_core
   flutter_secure_storage_windows
-  irondash_engine_context
   isar_flutter_libs
   local_auth_windows
-  super_native_extensions
   url_launcher_windows
 )
 
