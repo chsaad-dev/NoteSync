@@ -1,0 +1,7 @@
+name = "notesync-backend"
+main = "index.js"
+compatibility_date = "2023-01-01"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "391b6662eb9c4f2cbb6c540285711693"
