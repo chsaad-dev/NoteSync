@@ -20,26 +20,20 @@ import 'presentation/screens/home/home_screen.dart';
 import 'firebase_options.dart';
 
 void main() async {
-  debugPrint('--- MAIN START ---');
   WidgetsFlutterBinding.ensureInitialized();
-  debugPrint('--- WidgetsFlutterBinding initialized ---');
   
   // Load Dotenv Configuration first so environment variables are available during Firebase options resolution
   try {
-    debugPrint('--- Loading dotenv ---');
     await dotenv.load(fileName: '.env');
-    debugPrint('--- Dotenv loaded successfully ---');
   } catch (e) {
     debugPrint('Failed to load .env: $e');
   }
 
   // Initialize Firebase (safely catches exceptions if local configurations are missing)
   try {
-    debugPrint('--- Initializing Firebase ---');
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    debugPrint('--- Firebase initialized successfully ---');
   } catch (e, stack) {
     debugPrint('Firebase initialization failed: $e');
     debugPrint('Stack trace: $stack');
@@ -49,20 +43,16 @@ void main() async {
   final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? 'your_cloudinary_cloud_name';
 
   // Initialize dependencies
-  debugPrint('--- Initializing Dependencies (di.init) ---');
   await di.init(
     workerUrl: workerUrl,
     cloudinaryCloudName: cloudName,
   );
-  debugPrint('--- Dependencies initialized successfully ---');
 
-  debugPrint('--- Running App (runApp) ---');
   runApp(
     const ProviderScope(
       child: MyApp(),
     ),
   );
-  debugPrint('--- runApp finished execution ---');
 }
 
 class MyApp extends ConsumerStatefulWidget {
