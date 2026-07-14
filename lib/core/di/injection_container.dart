@@ -50,13 +50,17 @@ Future<void> init({
     isar = testingIsar;
   } else {
     if (kIsWeb) {
+      debugPrint('--- DI: Web detected, skipping Isar ---');
       isar = null; // Isar 3.x web support is disabled; use in-memory fallback
     } else {
+      debugPrint('--- DI: Opening Isar ---');
       final dir = await getApplicationDocumentsDirectory();
+      debugPrint('--- DI: Documents directory path: ${dir.path} ---');
       isar = await Isar.open(
         [IsarNoteModelSchema],
         directory: dir.path,
       );
+      debugPrint('--- DI: Isar opened successfully ---');
     }
   }
   if (isar != null && !sl.isRegistered<Isar>()) {
