@@ -20,6 +20,7 @@ class IsarNoteModel {
   late bool isPinned;
   late bool isDeleted;
   late bool isSynced;
+  late bool isVault;
 
   late List<String> tags;
   String? folderId;
@@ -43,6 +44,7 @@ class IsarNoteModel {
       ..isPinned = entity.isPinned
       ..isDeleted = entity.isDeleted
       ..isSynced = entity.isSynced
+      ..isVault = entity.isVault
       ..tags = entity.tags
       ..folderId = entity.folderId
       ..mediaUrls = entity.mediaUrls
@@ -63,6 +65,7 @@ class IsarNoteModel {
       folderId: folderId,
       mediaUrls: mediaUrls,
       ownerId: ownerId,
+      isVault: isVault,
     );
   }
 }

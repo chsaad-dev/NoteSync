@@ -8,7 +8,6 @@ import '../../domain/entities/note_entity.dart';
 import '../../domain/repository/note_repository.dart';
 import '../local/models/isar_note_model.dart';
 import '../local/note_local_data_source.dart';
-import '../models/firestore_note_model.dart';
 import '../remote/cloudinary_service.dart';
 import '../remote/note_remote_data_source.dart';
 
@@ -65,6 +64,22 @@ class NoteRepositoryImpl implements NoteRepository {
   @override
   Stream<List<NoteEntity>> watchTrash() {
     return _localDataSource.watchTrash(_currentUserId).asyncMap((models) async {
+      final entities = <NoteEntity>[];
+      for (final model in models) {
+        try {
+          final decryptedBody = await _encryptionService.decrypt(model.encryptedBody, model.iv);
+          entities.add(model.toEntity(decryptedBody));
+        } catch (_) {
+          entities.add(model.toEntity('[Decryption Error: Check Key]'));
+        }
+      }
+      return entities;
+    });
+  }
+
+  @override
+  Stream<List<NoteEntity>> watchVault() {
+    return _localDataSource.watchVault(_currentUserId).asyncMap((models) async {
       final entities = <NoteEntity>[];
       for (final model in models) {
         try {
@@ -206,6 +221,28 @@ class NoteRepositoryImpl implements NoteRepository {
   Future<bool> _isConnected() async {
     final result = await _connectivity.checkConnectivity();
     return !result.contains(ConnectivityResult.none);
+  }
+
+  @override
+  Future<Result<void>> renameFolder(String oldName, String newName) async {
+    try {
+      await _localDataSource.renameFolder(_currentUserId, oldName, newName);
+      _triggerSyncAsynchronously();
+      return const Success(null);
+    } catch (e) {
+      return FailureResult(DatabaseFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Result<void>> deleteFolder(String folderName, {required bool deleteNotes}) async {
+    try {
+      await _localDataSource.deleteFolder(_currentUserId, folderName, deleteNotes);
+      _triggerSyncAsynchronously();
+      return const Success(null);
+    } catch (e) {
+      return FailureResult(DatabaseFailure(e.toString()));
+    }
   }
 
   void _triggerSyncAsynchronously() {

@@ -47,38 +47,43 @@ final IsarNoteModelSchema = CollectionSchema(
       name: r'isSynced',
       type: IsarType.bool,
     ),
-    r'iv': PropertySchema(
+    r'isVault': PropertySchema(
       id: 6,
+      name: r'isVault',
+      type: IsarType.bool,
+    ),
+    r'iv': PropertySchema(
+      id: 7,
       name: r'iv',
       type: IsarType.string,
     ),
     r'mediaUrls': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'mediaUrls',
       type: IsarType.stringList,
     ),
     r'noteId': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'noteId',
       type: IsarType.string,
     ),
     r'ownerId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'ownerId',
       type: IsarType.string,
     ),
     r'tags': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'title': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -157,13 +162,14 @@ void _isarNoteModelSerialize(
   writer.writeBool(offsets[3], object.isDeleted);
   writer.writeBool(offsets[4], object.isPinned);
   writer.writeBool(offsets[5], object.isSynced);
-  writer.writeString(offsets[6], object.iv);
-  writer.writeStringList(offsets[7], object.mediaUrls);
-  writer.writeString(offsets[8], object.noteId);
-  writer.writeString(offsets[9], object.ownerId);
-  writer.writeStringList(offsets[10], object.tags);
-  writer.writeString(offsets[11], object.title);
-  writer.writeDateTime(offsets[12], object.updatedAt);
+  writer.writeBool(offsets[6], object.isVault);
+  writer.writeString(offsets[7], object.iv);
+  writer.writeStringList(offsets[8], object.mediaUrls);
+  writer.writeString(offsets[9], object.noteId);
+  writer.writeString(offsets[10], object.ownerId);
+  writer.writeStringList(offsets[11], object.tags);
+  writer.writeString(offsets[12], object.title);
+  writer.writeDateTime(offsets[13], object.updatedAt);
 }
 
 IsarNoteModel _isarNoteModelDeserialize(
@@ -180,13 +186,14 @@ IsarNoteModel _isarNoteModelDeserialize(
   object.isDeleted = reader.readBool(offsets[3]);
   object.isPinned = reader.readBool(offsets[4]);
   object.isSynced = reader.readBool(offsets[5]);
-  object.iv = reader.readString(offsets[6]);
-  object.mediaUrls = reader.readStringList(offsets[7]) ?? [];
-  object.noteId = reader.readString(offsets[8]);
-  object.ownerId = reader.readString(offsets[9]);
-  object.tags = reader.readStringList(offsets[10]) ?? [];
-  object.title = reader.readString(offsets[11]);
-  object.updatedAt = reader.readDateTime(offsets[12]);
+  object.isVault = reader.readBool(offsets[6]);
+  object.iv = reader.readString(offsets[7]);
+  object.mediaUrls = reader.readStringList(offsets[8]) ?? [];
+  object.noteId = reader.readString(offsets[9]);
+  object.ownerId = reader.readString(offsets[10]);
+  object.tags = reader.readStringList(offsets[11]) ?? [];
+  object.title = reader.readString(offsets[12]);
+  object.updatedAt = reader.readDateTime(offsets[13]);
   return object;
 }
 
@@ -210,18 +217,20 @@ P _isarNoteModelDeserializeProp<P>(
     case 5:
       return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 7:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 8:
       return (reader.readString(offset)) as P;
+    case 8:
+      return (reader.readStringList(offset) ?? []) as P;
     case 9:
       return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 11:
       return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readStringList(offset) ?? []) as P;
     case 12:
+      return (reader.readString(offset)) as P;
+    case 13:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -866,6 +875,16 @@ extension IsarNoteModelQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isSynced',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      isVaultEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isVault',
         value: value,
       ));
     });
@@ -2007,6 +2026,18 @@ extension IsarNoteModelQuerySortBy
     });
   }
 
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> sortByIsVault() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isVault', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> sortByIsVaultDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isVault', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> sortByIv() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'iv', Sort.asc);
@@ -2162,6 +2193,18 @@ extension IsarNoteModelQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> thenByIsVault() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isVault', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> thenByIsVaultDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isVault', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> thenByIv() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'iv', Sort.asc);
@@ -2265,6 +2308,12 @@ extension IsarNoteModelQueryWhereDistinct
     });
   }
 
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QDistinct> distinctByIsVault() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isVault');
+    });
+  }
+
   QueryBuilder<IsarNoteModel, IsarNoteModel, QDistinct> distinctByIv(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2354,6 +2403,12 @@ extension IsarNoteModelQueryProperty
   QueryBuilder<IsarNoteModel, bool, QQueryOperations> isSyncedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isSynced');
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, bool, QQueryOperations> isVaultProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isVault');
     });
   }
 

@@ -1,12 +1,17 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../domain/entities/note_entity.dart';
 import '../../../domain/repository/note_repository.dart';
 import '../../../core/di/injection_container.dart';
+import '../../../core/utils/quill_helper.dart';
 import '../../providers/editor_provider.dart';
+import '../../providers/biometric_provider.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final NoteEntity? note;
@@ -186,6 +191,84 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     );
   }
 
+  void _handleMenuAction(String action, WidgetRef ref, NoteEntity note) async {
+    switch (action) {
+      case 'lock':
+        final isLocking = !note.isVault;
+        if (isLocking) {
+          final success = await ref.read(biometricProvider.notifier).authenticate();
+          if (success) {
+            ref.read(noteEditorProvider.notifier).updateNoteContent(isVault: true);
+            await ref.read(noteEditorProvider.notifier).save();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Note locked in Private Vault'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              Navigator.pop(context);
+            }
+          }
+        } else {
+          final success = await ref.read(biometricProvider.notifier).authenticate();
+          if (success) {
+            ref.read(noteEditorProvider.notifier).updateNoteContent(isVault: false);
+            await ref.read(noteEditorProvider.notifier).save();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Note unlocked from Private Vault'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          }
+        }
+        break;
+      case 'share':
+        final plainText = QuillHelper.toPlainText(note.body);
+        final titleText = note.title.isNotEmpty ? note.title : 'Untitled';
+        await Share.share('$titleText\n\n$plainText');
+        break;
+      case 'export_md':
+        final plainText = QuillHelper.toPlainText(note.body);
+        final titleText = note.title.isNotEmpty ? note.title : 'Untitled';
+        final markdown = '# $titleText\n\n$plainText';
+        await _exportFile(titleText, markdown, '.md');
+        break;
+      case 'export_txt':
+        final plainText = QuillHelper.toPlainText(note.body);
+        final titleText = note.title.isNotEmpty ? note.title : 'Untitled';
+        final content = '$titleText\n\n$plainText';
+        await _exportFile(titleText, content, '.txt');
+        break;
+    }
+  }
+
+  Future<void> _exportFile(String title, String content, String extension) async {
+    try {
+      final directory = await getTemporaryDirectory();
+      final safeTitle = title.replaceAll(RegExp(r'[^\w\s\-]'), '').trim().replaceAll(' ', '_');
+      final filename = '${safeTitle}_${DateTime.now().millisecondsSinceEpoch}$extension';
+      final file = File('${directory.path}/$filename');
+      await file.writeAsString(content);
+
+      final xFile = XFile(file.path);
+      await Share.shareXFiles([xFile], text: 'Exported Note: $title');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final editorState = ref.watch(noteEditorProvider);
@@ -235,6 +318,56 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               tooltip: 'Move to Trash',
               onPressed: () => _confirmDelete(context),
             ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) => _handleMenuAction(value, ref, note),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'lock',
+                child: Row(
+                  children: [
+                    Icon(
+                      note.isVault ? Icons.lock_open : Icons.lock_outline,
+                      color: Colors.amber,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(note.isVault ? 'Unlock Note' : 'Lock Note'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'share',
+                child: Row(
+                  children: [
+                    Icon(Icons.share, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Text('Share Text'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'export_md',
+                child: Row(
+                  children: [
+                    Icon(Icons.description, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Text('Export as Markdown (.md)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'export_txt',
+                child: Row(
+                  children: [
+                    Icon(Icons.text_snippet, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Text('Export as Plain Text (.txt)'),
+                  ],
+                ),
+              ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () async {

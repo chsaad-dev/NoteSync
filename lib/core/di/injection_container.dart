@@ -21,6 +21,9 @@ import '../../domain/usecases/sync_notes.dart';
 import '../../domain/usecases/upload_media.dart';
 import '../../domain/usecases/watch_notes.dart';
 import '../../domain/usecases/update_note.dart';
+import '../../domain/usecases/watch_vault_notes.dart';
+import '../../domain/usecases/rename_folder.dart';
+import '../../domain/usecases/delete_folder.dart';
 import '../security/encryption_service.dart';
 
 final sl = GetIt.instance;
@@ -137,5 +140,14 @@ Future<void> init({
   }
   if (!sl.isRegistered<DeleteAccount>()) {
     sl.registerLazySingleton<DeleteAccount>(() => DeleteAccount(sl()));
+  }
+  if (!sl.isRegistered<WatchVaultNotes>()) {
+    sl.registerLazySingleton<WatchVaultNotes>(() => WatchVaultNotes(sl()));
+  }
+  if (!sl.isRegistered<RenameFolder>()) {
+    sl.registerLazySingleton<RenameFolder>(() => RenameFolder(sl()));
+  }
+  if (!sl.isRegistered<DeleteFolder>()) {
+    sl.registerLazySingleton<DeleteFolder>(() => DeleteFolder(sl()));
   }
 }

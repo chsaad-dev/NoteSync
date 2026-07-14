@@ -11,6 +11,9 @@ import '../../providers/sync_provider.dart';
 import '../note_editor/note_editor_screen.dart';
 import '../settings/settings_screen.dart';
 import '../trash/trash_screen.dart';
+import '../folders/folders_manager_screen.dart';
+import '../vault/vault_screen.dart';
+import '../../providers/biometric_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -67,6 +70,14 @@ class HomeScreen extends ConsumerWidget {
                 Navigator.pop(context);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.folder_copy_outlined),
+              title: const Text('Manage Folders'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const FoldersManagerScreen()));
+              },
+            ),
             if (allFolders.isNotEmpty) ...[
               const Divider(),
               const Padding(
@@ -85,6 +96,29 @@ class HomeScreen extends ConsumerWidget {
             ],
             const Spacer(),
             const Divider(),
+            ListTile(
+              leading: const Icon(Icons.lock_outline, color: Colors.amber),
+              title: const Text('Private Vault'),
+              onTap: () async {
+                Navigator.pop(context);
+                final success = await ref.read(biometricProvider.notifier).authenticate();
+                if (success) {
+                  if (context.mounted) {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const VaultScreen()));
+                  }
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Authentication failed'),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.delete_outline),
               title: const Text('Trash / Deleted'),

@@ -3,6 +3,7 @@ import '../../core/di/injection_container.dart';
 import '../../domain/entities/note_entity.dart';
 import '../../domain/repository/note_repository.dart';
 import '../../domain/usecases/watch_notes.dart';
+import '../../domain/usecases/watch_vault_notes.dart';
 
 // Search Query State
 final searchQueryProvider = StateProvider<String>((ref) => '');
@@ -23,6 +24,12 @@ final notesStreamProvider = StreamProvider<List<NoteEntity>>((ref) {
 final trashStreamProvider = StreamProvider<List<NoteEntity>>((ref) {
   final repo = sl<NoteRepository>();
   return repo.watchTrash();
+});
+
+// Stream of all Vault Notes from Local DB
+final vaultStreamProvider = StreamProvider<List<NoteEntity>>((ref) {
+  final watchVault = sl<WatchVaultNotes>();
+  return watchVault();
 });
 
 // Filtered Notes Provider (combines Search, Pins, Folders, and Tags)
