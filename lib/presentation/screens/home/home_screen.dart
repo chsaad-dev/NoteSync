@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:notesync/core/di/injection_container.dart';
 import '../../../core/utils/quill_helper.dart';
 import '../../../domain/entities/note_entity.dart';
+import '../../../domain/repository/note_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/sync_provider.dart';
@@ -182,7 +183,7 @@ class HomeScreen extends ConsumerWidget {
                             padding: EdgeInsets.symmetric(vertical: 8.0),
                             child: Text('PINNED', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.0, color: Colors.grey)),
                           ),
-                          _buildNotesGrid(context, pinnedNotes),
+                          _buildNotesGrid(context, ref, pinnedNotes),
                           const SizedBox(height: 16),
                         ],
                         if (unpinnedNotes.isNotEmpty) ...[
@@ -191,7 +192,7 @@ class HomeScreen extends ConsumerWidget {
                               padding: EdgeInsets.symmetric(vertical: 8.0),
                               child: Text('RECENT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.0, color: Colors.grey)),
                             ),
-                          _buildNotesGrid(context, unpinnedNotes),
+                          _buildNotesGrid(context, ref, unpinnedNotes),
                         ],
                       ],
                     ),
@@ -259,7 +260,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotesGrid(BuildContext context, List<NoteEntity> notes) {
+  Widget _buildNotesGrid(BuildContext context, WidgetRef ref, List<NoteEntity> notes) {
     // Basic multi-column flow matching a masonry look
     final width = MediaQuery.of(context).size.width;
     final crossAxisCount = width > 600 ? 3 : 2;
@@ -275,12 +276,12 @@ class HomeScreen extends ConsumerWidget {
       ),
       itemCount: notes.length,
       itemBuilder: (context, index) {
-        return _buildNoteCard(context, notes[index]);
+        return _buildNoteCard(context, ref, notes[index]);
       },
     );
   }
 
-  Widget _buildNoteCard(BuildContext context, NoteEntity note) {
+  Widget _buildNoteCard(BuildContext context, WidgetRef ref, NoteEntity note) {
     final plainBody = QuillHelper.toPlainText(note.body);
 
     return InkWell(
@@ -290,6 +291,7 @@ class HomeScreen extends ConsumerWidget {
           MaterialPageRoute(builder: (context) => NoteEditorScreen(note: note)),
         );
       },
+      onLongPress: () => _showNoteContextMenu(context, ref, note),
       borderRadius: BorderRadius.circular(16),
       child: Card(
         margin: EdgeInsets.zero,
@@ -359,6 +361,73 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showNoteContextMenu(BuildContext context, WidgetRef ref, NoteEntity note) {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                note.title.isEmpty ? 'Untitled' : note.title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: Icon(
+                note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                color: note.isPinned ? Colors.amber.shade700 : null,
+              ),
+              title: Text(note.isPinned ? 'Unpin Note' : 'Pin Note'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                final repo = sl<NoteRepository>();
+                final updatedNote = note.copyWith(
+                  isPinned: !note.isPinned,
+                  updatedAt: DateTime.now(),
+                  isSynced: false,
+                );
+                await repo.saveNote(updatedNote);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('Move to Trash', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                final repo = sl<NoteRepository>();
+                final result = await repo.deleteNote(note.noteId);
+                result.fold(
+                  (_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Note moved to trash'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  (failure) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed: ${failure.message}'),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

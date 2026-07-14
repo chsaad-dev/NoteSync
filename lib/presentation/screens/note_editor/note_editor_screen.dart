@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../domain/entities/note_entity.dart';
+import '../../../domain/repository/note_repository.dart';
+import '../../../core/di/injection_container.dart';
 import '../../providers/editor_provider.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
@@ -135,6 +137,55 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     );
   }
 
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Move to Trash?'),
+        content: const Text('This note will be moved to the trash. You can restore it later from the Trash screen.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              final repo = sl<NoteRepository>();
+              final noteId = ref.read(noteEditorProvider).note?.noteId;
+              if (noteId != null) {
+                final result = await repo.deleteNote(noteId);
+                if (mounted) {
+                  result.fold(
+                    (_) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Note moved to trash'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      Navigator.pop(context); // Exit the editor
+                    },
+                    (failure) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed: ${failure.message}'),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                  );
+                }
+              }
+            },
+            child: const Text('Move to Trash', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final editorState = ref.watch(noteEditorProvider);
@@ -177,6 +228,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             icon: const Icon(Icons.attachment),
             onPressed: _pickMedia,
           ),
+          // Only show delete button for existing notes (not brand new ones)
+          if (widget.note != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              tooltip: 'Move to Trash',
+              onPressed: () => _confirmDelete(context),
+            ),
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () async {
