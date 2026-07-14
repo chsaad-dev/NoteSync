@@ -17,12 +17,16 @@ import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/app_lock_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 
+import 'firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Firebase (safely catches exceptions if local configurations are missing)
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (_) {}
 
   // Load Dotenv Configuration

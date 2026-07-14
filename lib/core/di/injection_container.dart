@@ -45,15 +45,12 @@ Future<void> init({
   }
 
   // Isar local DB Initialization
-  Isar isar;
+  Isar? isar;
   if (testingIsar != null) {
     isar = testingIsar;
   } else {
     if (kIsWeb) {
-      isar = await Isar.open(
-        [IsarNoteModelSchema],
-        directory: '',
-      );
+      isar = null; // Isar 3.x web support is disabled; use in-memory fallback
     } else {
       final dir = await getApplicationDocumentsDirectory();
       isar = await Isar.open(
@@ -62,7 +59,7 @@ Future<void> init({
       );
     }
   }
-  if (!sl.isRegistered<Isar>()) {
+  if (isar != null && !sl.isRegistered<Isar>()) {
     sl.registerSingleton<Isar>(isar);
   }
 
@@ -73,7 +70,9 @@ Future<void> init({
 
   // Data Sources
   if (!sl.isRegistered<NoteLocalDataSource>()) {
-    sl.registerLazySingleton<NoteLocalDataSource>(() => NoteLocalDataSource(sl()));
+    sl.registerLazySingleton<NoteLocalDataSource>(
+      () => NoteLocalDataSource(sl.isRegistered<Isar>() ? sl<Isar>() : null),
+    );
   }
   if (!sl.isRegistered<NoteRemoteDataSource>()) {
     sl.registerLazySingleton<NoteRemoteDataSource>(
