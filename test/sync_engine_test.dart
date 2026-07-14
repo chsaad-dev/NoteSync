@@ -108,6 +108,7 @@ void main() {
         ..isPinned = false;
       localIsarModel.isSynced = true; 
       localIsarModel.isDeleted = false;
+      localIsarModel.isVault = false;
       localIsarModel.tags = [];
       localIsarModel.mediaUrls = [];
       localIsarModel.ownerId = 'user123';
@@ -166,6 +167,7 @@ void main() {
         ..isPinned = false;
       localIsarModel.isSynced = false; 
       localIsarModel.isDeleted = false;
+      localIsarModel.isVault = false;
       localIsarModel.tags = [];
       localIsarModel.mediaUrls = [];
       localIsarModel.ownerId = 'user123';

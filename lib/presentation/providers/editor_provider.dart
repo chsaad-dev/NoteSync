@@ -78,6 +78,7 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
     List<String>? tags,
     String? folderId,
     bool? isPinned,
+    bool? isVault,
   }) {
     final currentNote = state.note;
     if (currentNote == null) return;
@@ -88,6 +89,7 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
       tags: tags ?? currentNote.tags,
       folderId: folderId ?? currentNote.folderId,
       isPinned: isPinned ?? currentNote.isPinned,
+      isVault: isVault ?? currentNote.isVault,
       updatedAt: DateTime.now(),
       isSynced: false,
     );

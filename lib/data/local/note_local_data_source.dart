@@ -12,9 +12,15 @@ class NoteLocalDataSource {
 
   NoteLocalDataSource(this._isar);
 
-  List<IsarNoteModel> _getWebNotesList(String ownerId, bool isDeleted) {
+  List<IsarNoteModel> _getWebNotesList(String ownerId, bool isDeleted, {bool isVault = false}) {
     final list = _webNotes.values
-        .where((n) => n.ownerId == ownerId && n.isDeleted == isDeleted)
+        .where((n) {
+          if (isDeleted) {
+            return n.ownerId == ownerId && n.isDeleted == true;
+          } else {
+            return n.ownerId == ownerId && n.isDeleted == false && n.isVault == isVault;
+          }
+        })
         .toList();
     list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return list;
@@ -44,6 +50,7 @@ class NoteLocalDataSource {
         .filter()
         .ownerIdEqualTo(ownerId)
         .isDeletedEqualTo(false)
+        .isVaultEqualTo(false)
         .sortByUpdatedAtDesc()
         .watch(fireImmediately: true);
   }
@@ -72,6 +79,35 @@ class NoteLocalDataSource {
         .filter()
         .ownerIdEqualTo(ownerId)
         .isDeletedEqualTo(true)
+        .sortByUpdatedAtDesc()
+        .watch(fireImmediately: true);
+  }
+
+  Stream<List<IsarNoteModel>> watchVault(String ownerId) {
+    if (kIsWeb || _isar == null) {
+      final controller = StreamController<List<IsarNoteModel>>();
+      
+      void emit() {
+        if (!controller.isClosed) {
+          controller.add(_getWebNotesList(ownerId, false, isVault: true));
+        }
+      }
+
+      emit();
+      final subscription = _streamController.stream.listen((_) => emit());
+      controller.onCancel = () {
+        subscription.cancel();
+        controller.close();
+      };
+      
+      return controller.stream;
+    }
+
+    return _isar!.isarNoteModels
+        .filter()
+        .ownerIdEqualTo(ownerId)
+        .isDeletedEqualTo(false)
+        .isVaultEqualTo(true)
         .sortByUpdatedAtDesc()
         .watch(fireImmediately: true);
   }
@@ -204,6 +240,107 @@ class NoteLocalDataSource {
     }
     await _isar!.writeTxn(() async {
       await _isar!.isarNoteModels.clear();
+    });
+  }
+
+  Future<void> renameFolder(String ownerId, String oldName, String newName) async {
+    if (kIsWeb || _isar == null) {
+      for (final key in _webNotes.keys) {
+        final model = _webNotes[key]!;
+        if (model.ownerId == ownerId && model.folderId == oldName) {
+          final updated = IsarNoteModel()
+            ..id = model.id
+            ..noteId = model.noteId
+            ..title = model.title
+            ..encryptedBody = model.encryptedBody
+            ..iv = model.iv
+            ..createdAt = model.createdAt
+            ..updatedAt = DateTime.now()
+            ..isPinned = model.isPinned
+            ..isDeleted = model.isDeleted
+            ..isSynced = false
+            ..isVault = model.isVault
+            ..tags = model.tags
+            ..folderId = newName
+            ..mediaUrls = model.mediaUrls
+            ..ownerId = model.ownerId;
+          _webNotes[key] = updated;
+        }
+      }
+      _streamController.add(null);
+      return;
+    }
+    await _isar!.writeTxn(() async {
+      final matching = await _isar!.isarNoteModels
+          .filter()
+          .ownerIdEqualTo(ownerId)
+          .folderIdEqualTo(oldName)
+          .findAll();
+      for (final model in matching) {
+        model.folderId = newName;
+        model.isSynced = false;
+        model.updatedAt = DateTime.now();
+      }
+      await _isar!.isarNoteModels.putAll(matching);
+    });
+  }
+
+  Future<void> deleteFolder(String ownerId, String folderName, bool deleteNotes) async {
+    if (kIsWeb || _isar == null) {
+      final keysToRemove = <String>[];
+      for (final key in _webNotes.keys) {
+        final model = _webNotes[key]!;
+        if (model.ownerId == ownerId && model.folderId == folderName) {
+          if (deleteNotes) {
+            keysToRemove.add(key);
+          } else {
+            final updated = IsarNoteModel()
+              ..id = model.id
+              ..noteId = model.noteId
+              ..title = model.title
+              ..encryptedBody = model.encryptedBody
+              ..iv = model.iv
+              ..createdAt = model.createdAt
+              ..updatedAt = DateTime.now()
+              ..isPinned = model.isPinned
+              ..isDeleted = model.isDeleted
+              ..isSynced = false
+              ..isVault = model.isVault
+              ..tags = model.tags
+              ..folderId = null
+              ..mediaUrls = model.mediaUrls
+              ..ownerId = model.ownerId;
+            _webNotes[key] = updated;
+          }
+        }
+      }
+      for (final k in keysToRemove) {
+        _webNotes.remove(k);
+      }
+      _streamController.add(null);
+      return;
+    }
+    await _isar!.writeTxn(() async {
+      final matching = await _isar!.isarNoteModels
+          .filter()
+          .ownerIdEqualTo(ownerId)
+          .folderIdEqualTo(folderName)
+          .findAll();
+      if (deleteNotes) {
+        for (final model in matching) {
+          model.isDeleted = true;
+          model.isSynced = false;
+          model.updatedAt = DateTime.now();
+        }
+        await _isar!.isarNoteModels.putAll(matching);
+      } else {
+        for (final model in matching) {
+          model.folderId = null;
+          model.isSynced = false;
+          model.updatedAt = DateTime.now();
+        }
+        await _isar!.isarNoteModels.putAll(matching);
+      }
     });
   }
 }

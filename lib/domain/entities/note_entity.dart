@@ -11,6 +11,7 @@ class NoteEntity {
   final String? folderId;
   final List<String> mediaUrls;
   final String ownerId;
+  final bool isVault;
 
   const NoteEntity({
     required this.noteId,
@@ -25,6 +26,7 @@ class NoteEntity {
     this.folderId,
     required this.mediaUrls,
     required this.ownerId,
+    this.isVault = false,
   });
 
   NoteEntity copyWith({
@@ -40,6 +42,7 @@ class NoteEntity {
     String? folderId,
     List<String>? mediaUrls,
     String? ownerId,
+    bool? isVault,
   }) {
     return NoteEntity(
       noteId: noteId ?? this.noteId,
@@ -54,6 +57,7 @@ class NoteEntity {
       folderId: folderId ?? this.folderId,
       mediaUrls: mediaUrls ?? this.mediaUrls,
       ownerId: ownerId ?? this.ownerId,
+      isVault: isVault ?? this.isVault,
     );
   }
 
@@ -73,7 +77,8 @@ class NoteEntity {
           tags == other.tags &&
           folderId == other.folderId &&
           mediaUrls == other.mediaUrls &&
-          ownerId == other.ownerId;
+          ownerId == other.ownerId &&
+          isVault == other.isVault;
 
   @override
   int get hashCode =>
@@ -88,5 +93,6 @@ class NoteEntity {
       tags.hashCode ^
       folderId.hashCode ^
       mediaUrls.hashCode ^
-      ownerId.hashCode;
+      ownerId.hashCode ^
+      isVault.hashCode;
 }

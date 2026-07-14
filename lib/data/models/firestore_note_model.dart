@@ -14,6 +14,7 @@ class FirestoreNoteModel {
   final String? folderId;
   final List<String> mediaUrls;
   final String ownerId;
+  final bool isVault;
 
   FirestoreNoteModel({
     required this.noteId,
@@ -28,6 +29,7 @@ class FirestoreNoteModel {
     this.folderId,
     required this.mediaUrls,
     required this.ownerId,
+    this.isVault = false,
   });
 
   factory FirestoreNoteModel.fromEntity(NoteEntity entity) {
@@ -44,6 +46,7 @@ class FirestoreNoteModel {
       folderId: entity.folderId,
       mediaUrls: entity.mediaUrls,
       ownerId: entity.ownerId,
+      isVault: entity.isVault,
     );
   }
 
@@ -61,6 +64,7 @@ class FirestoreNoteModel {
       folderId: folderId,
       mediaUrls: mediaUrls,
       ownerId: ownerId,
+      isVault: isVault,
     );
   }
 
@@ -78,6 +82,7 @@ class FirestoreNoteModel {
       folderId: json['folderId'] as String?,
       mediaUrls: List<String>.from(json['mediaUrls'] ?? []),
       ownerId: json['ownerId'] as String? ?? '',
+      isVault: json['isVault'] as bool? ?? false,
     );
   }
 
@@ -93,6 +98,7 @@ class FirestoreNoteModel {
       'tags': tags,
       'folderId': folderId,
       'mediaUrls': mediaUrls,
+      'isVault': isVault,
     };
   }
 }
