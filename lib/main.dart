@@ -22,17 +22,22 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Load Dotenv Configuration first so environment variables are available during Firebase options resolution
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('Failed to load .env: $e');
+  }
+
   // Initialize Firebase (safely catches exceptions if local configurations are missing)
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-  } catch (_) {}
-
-  // Load Dotenv Configuration
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (_) {}
+  } catch (e, stack) {
+    debugPrint('Firebase initialization failed: $e');
+    debugPrint('Stack trace: $stack');
+  }
 
   final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
   final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? 'your_cloudinary_cloud_name';
