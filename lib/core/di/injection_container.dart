@@ -49,11 +49,18 @@ Future<void> init({
   if (testingIsar != null) {
     isar = testingIsar;
   } else {
-    final String? path = kIsWeb ? null : (await getApplicationDocumentsDirectory()).path;
-    isar = await Isar.open(
-      [IsarNoteModelSchema],
-      directory: path,
-    );
+    if (kIsWeb) {
+      isar = await Isar.open(
+        [IsarNoteModelSchema],
+        directory: '',
+      );
+    } else {
+      final dir = await getApplicationDocumentsDirectory();
+      isar = await Isar.open(
+        [IsarNoteModelSchema],
+        directory: dir.path,
+      );
+    }
   }
   if (!sl.isRegistered<Isar>()) {
     sl.registerSingleton<Isar>(isar);

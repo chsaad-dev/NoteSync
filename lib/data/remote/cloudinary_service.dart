@@ -57,9 +57,19 @@ class CloudinaryService {
     final signData = json.decode(signResponse.body) as Map<String, dynamic>;
     final signature = signData['signature'] as String;
     final timestamp = signData['timestamp'].toString();
-    final apiKey = signData['apiKey'] as String;
-    final cloudName = signData['cloudName'] as String;
+    final apiKey = signData['apiKey'] as String?;
+    final cloudName = signData['cloudName'] as String?;
     final folder = signData['folder'] as String;
+
+    if (apiKey == null || apiKey.isEmpty || cloudName == null || cloudName.isEmpty) {
+      throw Exception(
+        'Cloudinary credentials are not configured on the Cloudflare Worker. '
+        'Please run: \n'
+        '  wrangler secret put CLOUDINARY_API_KEY\n'
+        '  wrangler secret put CLOUDINARY_CLOUD_NAME\n'
+        'on your backend as described in the README.',
+      );
+    }
 
     final ext = p.extension(filePath).toLowerCase();
     String resourceType = 'image';

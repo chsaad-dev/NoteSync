@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import 'core/di/injection_container.dart' as di;
@@ -93,12 +95,16 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _triggerBackgroundSync();
-      
+    if (state == AppLifecycleState.paused) {
       final biometric = ref.read(biometricProvider);
       if (biometric.isEnabled) {
         ref.read(biometricProvider.notifier).lock();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      _triggerBackgroundSync();
+      
+      final biometric = ref.read(biometricProvider);
+      if (biometric.isEnabled && biometric.isLocked) {
         ref.read(biometricProvider.notifier).authenticate();
       }
     }
@@ -129,6 +135,15 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       themeMode: themeMode,
       home: homeWidget,
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        FlutterQuillLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', 'US'),
+      ],
     );
   }
 }

@@ -207,12 +207,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: authState is AuthLoading
                           ? null
                           : () => ref.read(authProvider.notifier).signInWithGoogle(),
-                      icon: Image.network(
-                        'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
-                        height: 20,
-                        width: 20,
-                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata),
-                      ),
+                      icon: const Icon(Icons.g_mobiledata, size: 24),
                       label: const Text('Continue with Google'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),

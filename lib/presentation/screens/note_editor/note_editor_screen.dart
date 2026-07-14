@@ -19,6 +19,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   final _titleController = TextEditingController();
   final _folderController = TextEditingController();
   final _tagInputController = TextEditingController();
+  final _editorFocusNode = FocusNode();
   QuillController? _quillController;
   final ImagePicker _imagePicker = ImagePicker();
   bool _initialized = false;
@@ -72,6 +73,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     _titleController.dispose();
     _folderController.dispose();
     _tagInputController.dispose();
+    _editorFocusNode.dispose();
     _quillController?.dispose();
     super.dispose();
   }
@@ -207,144 +209,52 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               const SizedBox(height: 2),
 
             Expanded(
-              child: ListView(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
-                children: [
-                  // Title Input
-                  TextField(
-                    controller: _titleController,
-                    onChanged: (val) => ref.read(noteEditorProvider.notifier).updateNoteContent(title: val),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    decoration: const InputDecoration(
-                      hintText: 'Title',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      filled: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Title Input
+                    TextField(
+                      controller: _titleController,
+                      onChanged: (val) => ref.read(noteEditorProvider.notifier).updateNoteContent(title: val),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      decoration: const InputDecoration(
+                        hintText: 'Title',
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Folder Row
-                  Row(
-                    children: [
-                      Icon(Icons.folder_open, size: 18, color: Colors.grey.shade600),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _folderController,
-                          onChanged: (val) => ref.read(noteEditorProvider.notifier).updateNoteContent(folderId: val.trim()),
-                          style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
-                          decoration: const InputDecoration(
-                            hintText: 'Add to folder (e.g. Work, Personal)',
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            filled: false,
-                            contentPadding: EdgeInsets.zero,
+                    const SizedBox(height: 8),
+                    
+                    // Folder Row
+                    Row(
+                      children: [
+                        Icon(Icons.folder_open, size: 18, color: Colors.grey.shade600),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _folderController,
+                            onChanged: (val) => ref.read(noteEditorProvider.notifier).updateNoteContent(folderId: val.trim()),
+                            style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
+                            decoration: const InputDecoration(
+                              hintText: 'Add to folder (e.g. Work, Personal)',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              contentPadding: EdgeInsets.zero,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  
-                  // Media Previews
-                  if (note.mediaUrls.isNotEmpty) ...[
-                    SizedBox(
-                      height: 120,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: note.mediaUrls.length,
-                        itemBuilder: (context, index) {
-                          final url = note.mediaUrls[index];
-                          final isVideo = url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.avi');
-                          
-                          return Stack(
-                            children: [
-                              Container(
-                                width: 120,
-                                margin: const EdgeInsets.only(right: 8.0, top: 8.0),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                  image: isVideo
-                                      ? null
-                                      : DecorationImage(
-                                          image: NetworkImage(url),
-                                          fit: BoxFit.cover,
-                                        ),
-                                ),
-                                child: isVideo
-                                    ? const Center(child: Icon(Icons.play_circle_fill, size: 40, color: Colors.pink))
-                                    : null,
-                              ),
-                              Positioned(
-                                top: 0,
-                                right: 0,
-                                child: GestureDetector(
-                                  onTap: () => ref.read(noteEditorProvider.notifier).removeMedia(url),
-                                  child: Container(
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    padding: const EdgeInsets.all(4),
-                                    child: const Icon(Icons.close, size: 16, color: Colors.white),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                  ],
+                    const SizedBox(height: 4),
 
-                  // Quill Editor Rich Input
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 300),
-                    child: QuillEditor.basic(
-                      controller: _quillController!,
-                      config: const QuillEditorConfig(
-                        placeholder: 'Start writing your note...',
-                        expands: false,
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Rich Text Editing Toolbar (Glassmorphism look)
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                border: Border(top: BorderSide(color: Colors.grey.shade200)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Quill toolbar
-                  QuillSimpleToolbar(
-                    controller: _quillController!,
-                    config: const QuillSimpleToolbarConfig(
-                      showAlignmentButtons: false,
-                      showFontFamily: false,
-                      showFontSize: false,
-                      showListCheck: true,
-                      showCodeBlock: true,
-                      showIndent: false,
-                      showSearchButton: false,
-                    ),
-                  ),
-                  
-                  // Tags editor row
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Row(
+                    // Tags editor row (Moved from bottom toolbar!)
+                    Row(
                       children: [
                         const Icon(Icons.local_offer_outlined, size: 18, color: Colors.grey),
                         const SizedBox(width: 8),
@@ -385,8 +295,109 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const Divider(),
+                    
+                    // Media Previews
+                    if (note.mediaUrls.isNotEmpty) ...[
+                      SizedBox(
+                        height: 120,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: note.mediaUrls.length,
+                          itemBuilder: (context, index) {
+                            final url = note.mediaUrls[index];
+                            final isVideo = url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.avi');
+                            
+                            return Stack(
+                              children: [
+                                Container(
+                                  width: 120,
+                                  margin: const EdgeInsets.only(right: 8.0, top: 8.0),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                    image: isVideo
+                                        ? null
+                                        : DecorationImage(
+                                            image: NetworkImage(url),
+                                            fit: BoxFit.cover,
+                                          ),
+                                  ),
+                                  child: isVideo
+                                      ? const Center(child: Icon(Icons.play_circle_fill, size: 40, color: Colors.pink))
+                                      : null,
+                                ),
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: GestureDetector(
+                                    onTap: () => ref.read(noteEditorProvider.notifier).removeMedia(url),
+                                    child: Container(
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(4),
+                                      child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Quill Editor Rich Input (scrollable set to false inside SingleChildScrollView)
+                    QuillEditor.basic(
+                      controller: _quillController!,
+                      focusNode: _editorFocusNode,
+                      config: const QuillEditorConfig(
+                        placeholder: 'Start writing your note...',
+                        expands: false,
+                        scrollable: false,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Rich Text Editing Toolbar (Single compact row)
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                border: Border(top: BorderSide(color: Colors.grey.shade200)),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: QuillSimpleToolbar(
+                controller: _quillController!,
+                config: const QuillSimpleToolbarConfig(
+                  multiRowsDisplay: false,
+                  showAlignmentButtons: false,
+                  showFontFamily: false,
+                  showFontSize: false,
+                  showHeaderStyle: false,
+                  showListCheck: true,
+                  showCodeBlock: false,
+                  showIndent: false,
+                  showSearchButton: false,
+                  showSubscript: false,
+                  showSuperscript: false,
+                  showColorButton: false,
+                  showBackgroundColorButton: false,
+                  showClearFormat: false,
+                  showInlineCode: false,
+                  showQuote: false,
+                  showDirection: false,
+                  showDividers: false,
+                  showSmallButton: false,
+                  showRedo: false,
+                  showUndo: false,
+                ),
               ),
             ),
           ],
