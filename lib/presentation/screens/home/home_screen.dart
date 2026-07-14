@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb;
+
 import 'package:notesync/core/di/injection_container.dart';
 import '../../../core/utils/quill_helper.dart';
 import '../../../domain/entities/note_entity.dart';

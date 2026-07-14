@@ -96,24 +96,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _auth.signInWithCredential(credential);
       } on fb.FirebaseAuthException catch (e) {
         // If an email/password account already exists with this email,
-        // link the Google credential to the existing account so the
-        // same UID (and therefore the same notes) are used.
+        // Firebase can't auto-link without the user's password.
         if (e.code == 'account-exists-with-different-credential') {
           final email = googleUser.email;
-          final methods = await _auth.fetchSignInMethodsForEmail(email);
-          if (methods.contains('password')) {
-            // The user has an existing email/password account.
-            // We can't auto-link without their password, so sign in with
-            // the Google credential anyway (Firebase may auto-merge if
-            // "One account per email" is enabled). If not, inform the user.
-            state = AuthError(
-              'An account already exists with $email. '
-              'Please sign in with your email & password first, then link Google from Settings.',
-            );
-            return;
-          }
-          // For other providers, attempt to sign in directly
-          await _auth.signInWithCredential(credential);
+          state = AuthError(
+            'An account already exists with $email. '
+            'Please sign in with your email & password first, then link Google from Settings.',
+          );
+          return;
         } else {
           rethrow;
         }

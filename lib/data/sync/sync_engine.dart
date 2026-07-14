@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/errors/result.dart';
 import '../../core/errors/failures.dart';
 import '../../core/security/encryption_service.dart';
-import '../../domain/entities/note_entity.dart';
+
 import '../local/models/isar_note_model.dart';
 import '../local/note_local_data_source.dart';
 import '../models/firestore_note_model.dart';
