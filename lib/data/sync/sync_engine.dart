@@ -45,11 +45,11 @@ class SyncEngine {
     }
 
     try {
-      // 1. Push Phase
-      await _pushLocalChanges(uid);
+      // 1. Push Phase — returns set of noteIds that were successfully pushed
+      final pushedNoteIds = await _pushLocalChanges(uid);
 
-      // 2. Pull Phase
-      await _pullRemoteChanges(uid);
+      // 2. Pull Phase — skips notes we just pushed to avoid false conflicts
+      await _pullRemoteChanges(uid, pushedNoteIds);
 
       // 3. Purge Phase
       await _purgeDeletedNotes(uid);
@@ -60,7 +60,8 @@ class SyncEngine {
     }
   }
 
-  Future<void> _pushLocalChanges(String uid) async {
+  Future<Set<String>> _pushLocalChanges(String uid) async {
+    final pushedIds = <String>{};
     final unsynced = await _localDataSource.getUnsyncedNotes(uid);
     for (final model in unsynced) {
       try {
@@ -69,6 +70,7 @@ class SyncEngine {
         final firestoreModel = FirestoreNoteModel.fromEntity(entity);
         
         await _remoteDataSource.saveNote(uid, firestoreModel);
+        pushedIds.add(model.noteId);
 
         final currentLocal = await _localDataSource.getNoteById(model.noteId);
         if (currentLocal != null && currentLocal.updatedAt.isAtSameMomentAs(model.updatedAt)) {
@@ -79,9 +81,10 @@ class SyncEngine {
         // Ignore single failure, continue other notes
       }
     }
+    return pushedIds;
   }
 
-  Future<void> _pullRemoteChanges(String uid) async {
+  Future<void> _pullRemoteChanges(String uid, Set<String> justPushedIds) async {
     final lastSyncStr = await _secureStorage.read(key: _lastSyncKey(uid));
     final lastSync = lastSyncStr != null
         ? DateTime.parse(lastSyncStr)
@@ -93,6 +96,7 @@ class SyncEngine {
     for (final remoteNote in remoteNotes) {
       final localModel = await _localDataSource.getNoteById(remoteNote.noteId);
       if (localModel == null) {
+        // New note from remote — save locally
         final encrypted = await _encryptionService.encrypt(remoteNote.body);
         final newLocalModel = IsarNoteModel.fromEntity(
           entity: remoteNote.toEntity(),
@@ -101,13 +105,37 @@ class SyncEngine {
         );
         await _localDataSource.saveNote(newLocalModel);
       } else {
+        // Note exists locally
+
+        // If we just pushed this note in this sync cycle, skip conflict
+        // detection — the remote version is what we just uploaded.
+        if (justPushedIds.contains(remoteNote.noteId)) {
+          // Just mark local as synced and move on
+          localModel.isSynced = true;
+          await _localDataSource.saveNote(localModel);
+          continue;
+        }
+
         final bool localChanged = !localModel.isSynced;
         
         if (localChanged) {
-          final diffSeconds = localModel.updatedAt.difference(remoteNote.updatedAt).abs().inSeconds;
-          if (diffSeconds <= 5) {
-            if (localModel.updatedAt.isBefore(remoteNote.updatedAt)) {
-              final localDecrypted = await _encryptionService.decrypt(localModel.encryptedBody, localModel.iv);
+          // Local has unsaved changes AND remote has changes.
+          // Check if the content is actually different before creating a conflict.
+          final localDecrypted = await _encryptionService.decrypt(localModel.encryptedBody, localModel.iv);
+          final bool sameContent = localModel.title == remoteNote.title &&
+              localDecrypted == remoteNote.body &&
+              localModel.isDeleted == remoteNote.isDeleted &&
+              localModel.isPinned == remoteNote.isPinned;
+
+          if (sameContent) {
+            // Content is identical — just mark as synced, no conflict needed
+            localModel.isSynced = true;
+            await _localDataSource.saveNote(localModel);
+          } else {
+            // Genuine conflict: local and remote have DIFFERENT content.
+            // Last-write-wins: keep the newer version, save older as conflict copy.
+            if (remoteNote.updatedAt.isAfter(localModel.updatedAt)) {
+              // Remote is newer — save local as conflict copy, overwrite local with remote
               final conflictNote = localModel.toEntity(localDecrypted).copyWith(
                 noteId: _uuid.v4(),
                 title: '${localModel.title} (conflict copy)',
@@ -129,33 +157,11 @@ class SyncEngine {
                 iv: encryptedRemote.ivBase64,
               );
               await _localDataSource.saveNote(updatedLocal);
-            } else {
-              final conflictNote = remoteNote.toEntity().copyWith(
-                noteId: _uuid.v4(),
-                title: '${remoteNote.title} (conflict copy)',
-                updatedAt: DateTime.now(),
-                isSynced: false,
-              );
-              final encryptedConflict = await _encryptionService.encrypt(conflictNote.body);
-              final conflictModel = IsarNoteModel.fromEntity(
-                entity: conflictNote,
-                encryptedBody: encryptedConflict.encryptedBase64,
-                iv: encryptedConflict.ivBase64,
-              );
-              await _localDataSource.saveNote(conflictModel);
             }
-          } else {
-            if (remoteNote.updatedAt.isAfter(localModel.updatedAt)) {
-              final encrypted = await _encryptionService.encrypt(remoteNote.body);
-              final updatedLocal = IsarNoteModel.fromEntity(
-                entity: remoteNote.toEntity(),
-                encryptedBody: encrypted.encryptedBase64,
-                iv: encrypted.ivBase64,
-              );
-              await _localDataSource.saveNote(updatedLocal);
-            }
+            // else: local is newer — it will be pushed in the next sync cycle
           }
         } else {
+          // Local is already synced — overwrite with remote version
           final encrypted = await _encryptionService.encrypt(remoteNote.body);
           final updatedLocal = IsarNoteModel.fromEntity(
             entity: remoteNote.toEntity(),
