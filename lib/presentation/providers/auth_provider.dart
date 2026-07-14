@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:google_sign_in/google_sign_in.dart';
@@ -31,7 +32,9 @@ class AuthError extends AuthState {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final fb.FirebaseAuth _auth;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: kIsWeb ? '608360411758-8j75tt0990rdjuudlc1cgq0e6p8mo075.apps.googleusercontent.com' : null,
+  );
 
   AuthNotifier(this._auth) : super(const AuthInitial()) {
     _auth.authStateChanges().listen((user) {
