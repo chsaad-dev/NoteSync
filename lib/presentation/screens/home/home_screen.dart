@@ -41,7 +41,8 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       drawer: Drawer(
-        child: Column(
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
               accountName: const Text('NoteSync User', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -94,7 +95,6 @@ class HomeScreen extends ConsumerWidget {
                     },
                   )),
             ],
-            const Spacer(),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.lock_outline, color: Colors.amber),
