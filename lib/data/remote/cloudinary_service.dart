@@ -5,9 +5,8 @@ import 'package:path/path.dart' as p;
 
 class CloudinaryService {
   final String _workerUrl;
-  final String _cloudName;
 
-  CloudinaryService(this._workerUrl, this._cloudName);
+  CloudinaryService(this._workerUrl, [String? _]);
 
   String? _extractPublicId(String url) {
     try {
