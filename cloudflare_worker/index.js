@@ -59,6 +59,21 @@ export default {
 
       // 5. Route Handling
       if (url.pathname === '/sign-upload') {
+        // Validate that all required Cloudinary env vars are present
+        if (!env.CLOUDINARY_API_KEY || !env.CLOUDINARY_API_SECRET || !env.CLOUDINARY_CLOUD_NAME) {
+          return new Response(JSON.stringify({ 
+            error: 'Server misconfiguration: Cloudinary secrets not bound.',
+            debug: {
+              hasApiKey: !!env.CLOUDINARY_API_KEY,
+              hasApiSecret: !!env.CLOUDINARY_API_SECRET,
+              hasCloudName: !!env.CLOUDINARY_CLOUD_NAME,
+            }
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
         const timestamp = Math.floor(Date.now() / 1000);
         const folder = `notesync/${userId}`;
         

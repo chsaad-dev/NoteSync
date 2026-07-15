@@ -51,7 +51,7 @@ class CloudinaryService {
     );
 
     if (signResponse.statusCode != 200) {
-      throw Exception('Failed to obtain signature: ${signResponse.body}');
+      throw Exception('Worker /sign-upload failed (${signResponse.statusCode}): ${signResponse.body}');
     }
 
     final signData = json.decode(signResponse.body) as Map<String, dynamic>;
@@ -63,11 +63,8 @@ class CloudinaryService {
 
     if (apiKey == null || apiKey.isEmpty || cloudName == null || cloudName.isEmpty) {
       throw Exception(
-        'Cloudinary credentials are not configured on the Cloudflare Worker. '
-        'Please run: \n'
-        '  wrangler secret put CLOUDINARY_API_KEY\n'
-        '  wrangler secret put CLOUDINARY_CLOUD_NAME\n'
-        'on your backend as described in the README.',
+        'Worker returned empty Cloudinary credentials. '
+        'Response: ${signResponse.body}',
       );
     }
 
