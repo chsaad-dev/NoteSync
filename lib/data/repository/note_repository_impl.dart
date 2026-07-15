@@ -177,10 +177,17 @@ class NoteRepositoryImpl implements NoteRepository {
   @override
   Future<Result<String>> uploadMedia(String filePath) async {
     try {
+      final connected = await _isConnected();
+      if (!connected) {
+        return const FailureResult(ServerFailure('No internet connection. Please check your network and try again.'));
+      }
       final token = await _getIdToken();
       final url = await _cloudinaryService.uploadMedia(filePath, token);
       return Success(url);
     } catch (e) {
+      if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
+        return const FailureResult(ServerFailure('No internet connection. Please check your network and try again.'));
+      }
       return FailureResult(ServerFailure(e.toString()));
     }
   }

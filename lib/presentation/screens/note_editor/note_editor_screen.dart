@@ -12,6 +12,7 @@ import '../../../core/di/injection_container.dart';
 import '../../../core/utils/quill_helper.dart';
 import '../../providers/editor_provider.dart';
 import '../../providers/biometric_provider.dart';
+import 'package:video_player/video_player.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final NoteEntity? note;
@@ -501,22 +502,44 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                             
                             return Stack(
                               children: [
-                                Container(
-                                  width: 120,
-                                  margin: const EdgeInsets.only(right: 8.0, top: 8.0),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey.shade300),
-                                    image: isVideo
-                                        ? null
-                                        : DecorationImage(
-                                            image: NetworkImage(url),
-                                            fit: BoxFit.cover,
-                                          ),
+                                GestureDetector(
+                                  onTap: () {
+                                    if (isVideo) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => FullScreenVideoPlayer(videoUrl: url),
+                                        ),
+                                      );
+                                    } else {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => FullScreenImageViewer(imageUrl: url),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: Hero(
+                                    tag: url,
+                                    child: Container(
+                                      width: 120,
+                                      margin: const EdgeInsets.only(right: 8.0, top: 8.0),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                        image: isVideo
+                                            ? null
+                                            : DecorationImage(
+                                                image: NetworkImage(url),
+                                                fit: BoxFit.cover,
+                                              ),
+                                      ),
+                                      child: isVideo
+                                          ? const Center(child: Icon(Icons.play_circle_fill, size: 40, color: Colors.pink))
+                                          : null,
+                                    ),
                                   ),
-                                  child: isVideo
-                                      ? const Center(child: Icon(Icons.play_circle_fill, size: 40, color: Colors.pink))
-                                      : null,
                                 ),
                                 Positioned(
                                   top: 0,
@@ -594,6 +617,169 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class FullScreenImageViewer extends StatelessWidget {
+  final String imageUrl;
+
+  const FullScreenImageViewer({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          clipBehavior: Clip.none,
+          maxScale: 4.0,
+          child: Hero(
+            tag: imageUrl,
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Center(
+                child: Text(
+                  'Failed to load image',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FullScreenVideoPlayer extends StatefulWidget {
+  final String videoUrl;
+
+  const FullScreenVideoPlayer({super.key, required this.videoUrl});
+
+  @override
+  State<FullScreenVideoPlayer> createState() => _FullScreenVideoPlayerState();
+}
+
+class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
+  late VideoPlayerController _controller;
+  bool _initialized = false;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+      ..initialize().then((_) {
+        setState(() {
+          _initialized = true;
+        });
+        _controller.play();
+      }).catchError((_) {
+        setState(() {
+          _hasError = true;
+        });
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text('Video Preview'),
+      ),
+      body: Center(
+        child: _hasError
+            ? const Text(
+                'Failed to play video',
+                style: TextStyle(color: Colors.white),
+              )
+            : !_initialized
+                ? const CircularProgressIndicator()
+                : AspectRatio(
+                    aspectRatio: _controller.value.aspectRatio,
+                    child: Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        Hero(
+                          tag: widget.videoUrl,
+                          child: VideoPlayer(_controller),
+                        ),
+                        _ControlsOverlay(controller: _controller),
+                        VideoProgressIndicator(
+                          _controller,
+                          allowScrubbing: true,
+                          colors: const VideoProgressColors(
+                            playedColor: Colors.pink,
+                            bufferedColor: Colors.grey,
+                            backgroundColor: Colors.black26,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+      ),
+    );
+  }
+}
+
+class _ControlsOverlay extends StatefulWidget {
+  const _ControlsOverlay({required this.controller});
+
+  final VideoPlayerController controller;
+
+  @override
+  State<_ControlsOverlay> createState() => _ControlsOverlayState();
+}
+
+class _ControlsOverlayState extends State<_ControlsOverlay> {
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 50),
+          reverseDuration: const Duration(milliseconds: 200),
+          child: widget.controller.value.isPlaying
+              ? const SizedBox.shrink()
+              : Container(
+                  color: Colors.black26,
+                  child: const Center(
+                    child: Icon(
+                      Icons.play_arrow,
+                      color: Colors.white,
+                      size: 80.0,
+                      semanticLabel: 'Play',
+                    ),
+                  ),
+                ),
+        ),
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              widget.controller.value.isPlaying
+                  ? widget.controller.pause()
+                  : widget.controller.play();
+            });
+          },
+        ),
+      ],
     );
   }
 }
