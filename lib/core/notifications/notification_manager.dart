@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 class NotificationManager {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -12,6 +13,12 @@ class NotificationManager {
 
   static Future<void> init() async {
     tz.initializeTimeZones();
+    try {
+      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (e) {
+      tz.setLocalLocation(tz.getLocation('UTC'));
+    }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -27,11 +34,11 @@ class NotificationManager {
       },
     );
 
-    // Request permissions for Android 13+
-    await _notificationsPlugin
+    final androidPlugin = _notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.requestNotificationsPermission();
+    await androidPlugin?.requestExactAlarmsPermission();
   }
 
   static Future<void> scheduleNotification({
@@ -43,24 +50,38 @@ class NotificationManager {
   }) async {
     if (scheduledDate.isBefore(DateTime.now())) return;
 
-    await _notificationsPlugin.zonedSchedule(
-      id: id,
-      title: title,
-      body: body,
-      scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'notesync_reminders_channel',
-          'NoteSync Reminders',
-          channelDescription: 'Channel for NoteSync note reminder alerts',
-          importance: Importance.max,
-          priority: Priority.high,
-          playSound: true,
-        ),
+    final details = const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'notesync_reminders_channel',
+        'NoteSync Reminders',
+        channelDescription: 'Channel for NoteSync note reminder alerts',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: payload,
     );
+
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: payload,
+      );
+    } catch (_) {
+      await _notificationsPlugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: payload,
+      );
+    }
   }
 
   static Future<void> cancelNotification(int id) async {
