@@ -12,6 +12,7 @@ import '../../../core/di/injection_container.dart';
 import '../../../core/utils/quill_helper.dart';
 import '../../providers/editor_provider.dart';
 import '../../providers/biometric_provider.dart';
+import '../../providers/notes_provider.dart';
 import 'package:video_player/video_player.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
@@ -31,6 +32,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   QuillController? _quillController;
   final ImagePicker _imagePicker = ImagePicker();
   bool _initialized = false;
+  AutocompleteTrigger? _activeTrigger;
 
   @override
   void initState() {
@@ -69,6 +71,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           ref.read(noteEditorProvider.notifier).updateNoteContent(body: contentJson);
         });
 
+        _quillController!.addListener(_onEditorStateChanged);
+
         setState(() {
           _initialized = true;
         });
@@ -82,6 +86,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     _folderController.dispose();
     _tagInputController.dispose();
     _editorFocusNode.dispose();
+    _quillController?.removeListener(_onEditorStateChanged);
     _quillController?.dispose();
     super.dispose();
   }
@@ -270,10 +275,245 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     }
   }
 
+  void _pickReminder(BuildContext context, NoteEntity note) async {
+    if (note.reminderAt != null) {
+      final formattedTime = '${note.reminderAt!.day}/${note.reminderAt!.month}/${note.reminderAt!.year} ${note.reminderAt!.hour.toString().padLeft(2, '0')}:${note.reminderAt!.minute.toString().padLeft(2, '0')}';
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Manage Reminder'),
+          content: Text('A reminder is currently set for:\n$formattedTime'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                ref.read(noteEditorProvider.notifier).updateNoteContent(clearReminder: true);
+                ref.read(noteEditorProvider.notifier).save();
+              },
+              child: const Text('Remove Reminder', style: TextStyle(color: Colors.red)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _selectDateTime(context, note);
+              },
+              child: const Text('Change Time'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _selectDateTime(context, note);
+    }
+  }
+
+  void _selectDateTime(BuildContext context, NoteEntity note) async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+
+    if (date == null) return;
+
+    if (!mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now.add(const Duration(minutes: 5))),
+    );
+
+    if (time == null) return;
+
+    final selectedDateTime = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+
+    if (selectedDateTime.isBefore(DateTime.now())) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a future date and time'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    ref.read(noteEditorProvider.notifier).updateNoteContent(reminderAt: selectedDateTime);
+    ref.read(noteEditorProvider.notifier).save();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Reminder set successfully'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _onEditorStateChanged() {
+    final trigger = _checkAutocompleteTrigger();
+    if (trigger?.trigger != _activeTrigger?.trigger || trigger?.query != _activeTrigger?.query) {
+      setState(() {
+        _activeTrigger = trigger;
+      });
+    }
+  }
+
+  AutocompleteTrigger? _checkAutocompleteTrigger() {
+    if (_quillController == null) return null;
+    final selection = _quillController!.selection;
+    if (!selection.isCollapsed) return null;
+
+    final cursor = selection.extentOffset;
+    if (cursor <= 0) return null;
+
+    final plainText = _quillController!.document.toPlainText();
+    final startInspect = cursor > 30 ? cursor - 30 : 0;
+    final textToInspect = plainText.substring(startInspect, cursor);
+
+    final doubleBracketRegExp = RegExp(r'\[\[([^\]]*)$');
+    final doubleBracketMatch = doubleBracketRegExp.firstMatch(textToInspect);
+    if (doubleBracketMatch != null) {
+      final query = doubleBracketMatch.group(1) ?? '';
+      final triggerOffset = textToInspect.indexOf('[[');
+      return AutocompleteTrigger(
+        trigger: '[[',
+        query: query,
+        startIndex: startInspect + triggerOffset,
+      );
+    }
+
+    final atRegExp = RegExp(r'@([a-zA-Z0-9\s]*)$');
+    final atMatch = atRegExp.firstMatch(textToInspect);
+    if (atMatch != null) {
+      final query = atMatch.group(1) ?? '';
+      final triggerOffset = textToInspect.lastIndexOf('@');
+      if (triggerOffset == 0 || RegExp(r'\s').hasMatch(textToInspect[triggerOffset - 1])) {
+        return AutocompleteTrigger(
+          trigger: '@',
+          query: query,
+          startIndex: startInspect + triggerOffset,
+        );
+      }
+    }
+
+    return null;
+  }
+
+  void _insertNoteLink(NoteEntity targetNote) {
+    if (_activeTrigger == null) return;
+
+    final trigger = _activeTrigger!;
+    final linkText = targetNote.title.isNotEmpty ? targetNote.title : 'Untitled Note';
+    final replaceIndex = trigger.startIndex;
+    final replaceLength = (trigger.trigger.length + trigger.query.length);
+
+    _quillController!.replaceText(
+      replaceIndex,
+      replaceLength,
+      linkText,
+      null,
+    );
+
+    _quillController!.formatText(
+      replaceIndex,
+      linkText.length,
+      LinkAttribute('notesync://notes/${targetNote.noteId}'),
+    );
+
+    _quillController!.updateSelection(
+      TextSelection.collapsed(offset: replaceIndex + linkText.length),
+      ChangeSource.local,
+    );
+
+    setState(() {
+      _activeTrigger = null;
+    });
+  }
+
+  void _openLinkedNote(BuildContext context, WidgetRef ref, String noteId) async {
+    final repo = sl<NoteRepository>();
+    final result = await repo.getNoteById(noteId);
+    result.fold(
+      (note) {
+        if (note != null) {
+          if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => NoteEditorScreen(note: note)),
+            );
+          }
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Linked note does not exist or was deleted'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      },
+      (failure) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to load linked note: ${failure.message}'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final editorState = ref.watch(noteEditorProvider);
     final note = editorState.note;
+    final notesAsync = ref.watch(notesStreamProvider);
+
+    // Dynamic autocomplete filters
+    List<NoteEntity> matchingNotes = [];
+    if (_activeTrigger != null) {
+      final query = _activeTrigger!.query.toLowerCase().trim();
+      notesAsync.whenData((allNotes) {
+        matchingNotes = allNotes.where((n) {
+          if (n.noteId == note?.noteId) return false;
+          final title = n.title.toLowerCase();
+          final plainBody = QuillHelper.toPlainText(n.body).toLowerCase();
+          return title.contains(query) || plainBody.contains(query);
+        }).toList();
+      });
+    }
+
+    // Build list of backlinks
+    final backlinks = <NoteEntity>[];
+    if (note != null) {
+      notesAsync.whenData((allNotes) {
+        for (final n in allNotes) {
+          if (n.noteId == note.noteId) continue;
+          if (n.body.contains('notesync://notes/${note.noteId}')) {
+            backlinks.add(n);
+          }
+        }
+      });
+    }
 
     ref.listen<String?>(
       noteEditorProvider.select((s) => s.error),
@@ -307,6 +547,14 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             onPressed: () {
               ref.read(noteEditorProvider.notifier).updateNoteContent(isPinned: !note.isPinned);
             },
+          ),
+          IconButton(
+            icon: Icon(
+              note.reminderAt != null ? Icons.notifications_active : Icons.notifications_none_outlined,
+              color: note.reminderAt != null ? Colors.amber.shade700 : null,
+            ),
+            tooltip: note.reminderAt != null ? 'Manage Reminder' : 'Set Reminder',
+            onPressed: () => _pickReminder(context, note),
           ),
           IconButton(
             icon: const Icon(Icons.attachment),
@@ -568,18 +816,83 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     QuillEditor.basic(
                       controller: _quillController!,
                       focusNode: _editorFocusNode,
-                      config: const QuillEditorConfig(
+                      config: QuillEditorConfig(
                         placeholder: 'Start writing your note...',
                         expands: false,
                         scrollable: false,
                         padding: EdgeInsets.zero,
+                        linkActionPickerDelegate: (context, link, node) async {
+                          if (link.startsWith('notesync://notes/')) {
+                            final noteId = link.split('notesync://notes/')[1];
+                            _openLinkedNote(context, ref, noteId);
+                            return LinkMenuAction.none;
+                          }
+                          return LinkMenuAction.launch;
+                        },
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    
+                    // Backlinks View Panel
+                    if (backlinks.isNotEmpty) ...[
+                      const Divider(),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          'Backlinks (Notes linking here)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
+                        ),
+                      ),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: backlinks.map((blNote) => ActionChip(
+                          avatar: Icon(Icons.link, size: 14, color: Theme.of(context).colorScheme.primary),
+                          label: Text(blNote.title.isNotEmpty ? blNote.title : 'Untitled'),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => NoteEditorScreen(note: blNote)),
+                            );
+                          },
+                        )).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ],
                 ),
               ),
             ),
             
+            // Autocomplete popover overlay list
+            if (_activeTrigger != null && matchingNotes.isNotEmpty)
+              Container(
+                constraints: const BoxConstraints(maxHeight: 150),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: matchingNotes.length,
+                  itemBuilder: (context, index) {
+                    final target = matchingNotes[index];
+                    return ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.link, size: 16, color: Colors.grey),
+                      title: Text(
+                        target.title.isNotEmpty ? target.title : 'Untitled Note',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: target.folderId != null && target.folderId!.isNotEmpty
+                          ? Text(target.folderId!, style: const TextStyle(fontSize: 10))
+                          : null,
+                      onTap: () => _insertNoteLink(target),
+                    );
+                  },
+                ),
+              ),
+
             // Rich Text Editing Toolbar (Single compact row)
             Container(
               decoration: BoxDecoration(
@@ -782,4 +1095,12 @@ class _ControlsOverlayState extends State<_ControlsOverlay> {
       ],
     );
   }
+}
+
+class AutocompleteTrigger {
+  final String trigger;
+  final String query;
+  final int startIndex;
+
+  AutocompleteTrigger({required this.trigger, required this.query, required this.startIndex});
 }

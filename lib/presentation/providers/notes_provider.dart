@@ -1,3 +1,5 @@
+import 'package:home_widget/home_widget.dart';
+import '../../core/utils/quill_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/di/injection_container.dart';
 import '../../domain/entities/note_entity.dart';
@@ -87,4 +89,34 @@ final allFoldersProvider = Provider<List<String>>((ref) {
     },
     orElse: () => [],
   );
+});
+
+Future<void> _updateHomeWidget(List<NoteEntity> pinnedNotes) async {
+  try {
+    for (int i = 0; i < 3; i++) {
+      if (i < pinnedNotes.length) {
+        final note = pinnedNotes[i];
+        final plainText = QuillHelper.toPlainText(note.body);
+        await HomeWidget.saveWidgetData<String>('pinned_title_$i', note.title.isNotEmpty ? note.title : 'Untitled');
+        await HomeWidget.saveWidgetData<String>('pinned_body_$i', plainText.trim());
+        await HomeWidget.saveWidgetData<String>('pinned_id_$i', note.noteId);
+      } else {
+        await HomeWidget.saveWidgetData<String>('pinned_title_$i', '');
+        await HomeWidget.saveWidgetData<String>('pinned_body_$i', '');
+        await HomeWidget.saveWidgetData<String>('pinned_id_$i', '');
+      }
+    }
+    await HomeWidget.updateWidget(
+      name: 'PinnedNotesWidget',
+      androidName: 'PinnedNotesWidget',
+    );
+  } catch (_) {}
+}
+
+final widgetSyncProvider = Provider<void>((ref) {
+  final notesAsync = ref.watch(notesStreamProvider);
+  notesAsync.whenData((notes) {
+    final pinned = notes.where((note) => note.isPinned && !note.isVault).toList();
+    _updateHomeWidget(pinned);
+  });
 });

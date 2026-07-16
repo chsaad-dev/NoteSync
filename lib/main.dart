@@ -18,9 +18,17 @@ import 'presentation/screens/auth/app_lock_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 
 import 'firebase_options.dart';
+import 'core/notifications/notification_manager.dart';
+import 'domain/repository/note_repository.dart';
+import 'presentation/screens/note_editor/note_editor_screen.dart';
+import 'package:home_widget/home_widget.dart';
+import 'presentation/providers/notes_provider.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationManager.init();
   
   // Load Dotenv Configuration first so environment variables are available during Firebase options resolution
   try {
@@ -64,6 +72,7 @@ class MyApp extends ConsumerStatefulWidget {
 
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<String?>? _notificationSubscription;
   Timer? _syncTimer;
 
   @override
@@ -71,12 +80,15 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _setupBackgroundSyncListeners();
+    _setupNotificationClickListener();
+    _setupWidgetClickListener();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _connectivitySubscription?.cancel();
+    _notificationSubscription?.cancel();
     _syncTimer?.cancel();
     super.dispose();
   }
@@ -102,6 +114,63 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     }
   }
 
+  void _setupNotificationClickListener() {
+    _notificationSubscription = NotificationManager.selectNotificationStream.stream.listen((noteId) async {
+      if (noteId != null && noteId.isNotEmpty) {
+        final repo = di.sl<NoteRepository>();
+        final result = await repo.getNoteById(noteId);
+        result.fold(
+          (note) {
+            if (note != null) {
+              navigatorKey.currentState?.push(
+                MaterialPageRoute(builder: (context) => NoteEditorScreen(note: note)),
+              );
+            }
+          },
+          (_) {},
+        );
+      }
+    });
+  }
+
+  void _setupWidgetClickListener() {
+    HomeWidget.initiallyLaunchedFromHomeWidget().then((uri) {
+      _handleWidgetClick(uri);
+    });
+
+    HomeWidget.widgetClicked.listen((uri) {
+      _handleWidgetClick(uri);
+    });
+  }
+
+  void _handleWidgetClick(Uri? uri) async {
+    if (uri != null) {
+      if (uri.scheme == 'notesync') {
+        if (uri.host == 'quick_capture') {
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(builder: (context) => const NoteEditorScreen()),
+          );
+        } else if (uri.host == 'notes') {
+          final noteId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+          if (noteId != null) {
+            final repo = di.sl<NoteRepository>();
+            final result = await repo.getNoteById(noteId);
+            result.fold(
+              (note) {
+                if (note != null) {
+                  navigatorKey.currentState?.push(
+                    MaterialPageRoute(builder: (context) => NoteEditorScreen(note: note)),
+                  );
+                }
+              },
+              (_) {},
+            );
+          }
+        }
+      }
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
@@ -121,7 +190,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeProvider);
+    ref.watch(widgetSyncProvider);
+    final themeState = ref.watch(themeProvider);
     final authState = ref.watch(authProvider);
     final biometricState = ref.watch(biometricProvider);
 
@@ -138,10 +208,11 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     }
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'NoteSync',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
+      theme: AppTheme.buildTheme(themeState, isDark: false),
+      darkTheme: AppTheme.buildTheme(themeState, isDark: true),
+      themeMode: themeState.themeMode,
       home: homeWidget,
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [

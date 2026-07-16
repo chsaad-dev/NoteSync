@@ -13,9 +13,9 @@ extension GetIsarNoteModelCollection on Isar {
   IsarCollection<IsarNoteModel> get isarNoteModels => this.collection();
 }
 
-final IsarNoteModelSchema = CollectionSchema(
+const IsarNoteModelSchema = CollectionSchema(
   name: r'IsarNoteModel',
-  id: int.parse('3100578282153100694'),
+  id: 3100578282153100694,
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -72,18 +72,23 @@ final IsarNoteModelSchema = CollectionSchema(
       name: r'ownerId',
       type: IsarType.string,
     ),
-    r'tags': PropertySchema(
+    r'reminderAt': PropertySchema(
       id: 11,
+      name: r'reminderAt',
+      type: IsarType.dateTime,
+    ),
+    r'tags': PropertySchema(
+      id: 12,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'title': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -95,7 +100,7 @@ final IsarNoteModelSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'noteId': IndexSchema(
-      id: int.parse('-9014133502494436840'),
+      id: -9014133502494436840,
       name: r'noteId',
       unique: true,
       replace: true,
@@ -167,9 +172,10 @@ void _isarNoteModelSerialize(
   writer.writeStringList(offsets[8], object.mediaUrls);
   writer.writeString(offsets[9], object.noteId);
   writer.writeString(offsets[10], object.ownerId);
-  writer.writeStringList(offsets[11], object.tags);
-  writer.writeString(offsets[12], object.title);
-  writer.writeDateTime(offsets[13], object.updatedAt);
+  writer.writeDateTime(offsets[11], object.reminderAt);
+  writer.writeStringList(offsets[12], object.tags);
+  writer.writeString(offsets[13], object.title);
+  writer.writeDateTime(offsets[14], object.updatedAt);
 }
 
 IsarNoteModel _isarNoteModelDeserialize(
@@ -191,9 +197,10 @@ IsarNoteModel _isarNoteModelDeserialize(
   object.mediaUrls = reader.readStringList(offsets[8]) ?? [];
   object.noteId = reader.readString(offsets[9]);
   object.ownerId = reader.readString(offsets[10]);
-  object.tags = reader.readStringList(offsets[11]) ?? [];
-  object.title = reader.readString(offsets[12]);
-  object.updatedAt = reader.readDateTime(offsets[13]);
+  object.reminderAt = reader.readDateTimeOrNull(offsets[11]);
+  object.tags = reader.readStringList(offsets[12]) ?? [];
+  object.title = reader.readString(offsets[13]);
+  object.updatedAt = reader.readDateTime(offsets[14]);
   return object;
 }
 
@@ -227,10 +234,12 @@ P _isarNoteModelDeserializeProp<P>(
     case 10:
       return (reader.readString(offset)) as P;
     case 11:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 12:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 13:
+      return (reader.readString(offset)) as P;
+    case 14:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1522,6 +1531,80 @@ extension IsarNoteModelQueryFilter
   }
 
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      reminderAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'reminderAt',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      reminderAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'reminderAt',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      reminderAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'reminderAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      reminderAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'reminderAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      reminderAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'reminderAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      reminderAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'reminderAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
       tagsElementEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -2074,6 +2157,19 @@ extension IsarNoteModelQuerySortBy
     });
   }
 
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> sortByReminderAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy>
+      sortByReminderAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> sortByTitle() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'title', Sort.asc);
@@ -2241,6 +2337,19 @@ extension IsarNoteModelQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> thenByReminderAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy>
+      thenByReminderAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'reminderAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> thenByTitle() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'title', Sort.asc);
@@ -2341,6 +2450,12 @@ extension IsarNoteModelQueryWhereDistinct
     });
   }
 
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QDistinct> distinctByReminderAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'reminderAt');
+    });
+  }
+
   QueryBuilder<IsarNoteModel, IsarNoteModel, QDistinct> distinctByTags() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'tags');
@@ -2434,6 +2549,13 @@ extension IsarNoteModelQueryProperty
   QueryBuilder<IsarNoteModel, String, QQueryOperations> ownerIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'ownerId');
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, DateTime?, QQueryOperations>
+      reminderAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'reminderAt');
     });
   }
 

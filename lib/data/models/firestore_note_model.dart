@@ -15,6 +15,7 @@ class FirestoreNoteModel {
   final List<String> mediaUrls;
   final String ownerId;
   final bool isVault;
+  final DateTime? reminderAt;
 
   FirestoreNoteModel({
     required this.noteId,
@@ -30,6 +31,7 @@ class FirestoreNoteModel {
     required this.mediaUrls,
     required this.ownerId,
     this.isVault = false,
+    this.reminderAt,
   });
 
   factory FirestoreNoteModel.fromEntity(NoteEntity entity) {
@@ -47,6 +49,7 @@ class FirestoreNoteModel {
       mediaUrls: entity.mediaUrls,
       ownerId: entity.ownerId,
       isVault: entity.isVault,
+      reminderAt: entity.reminderAt,
     );
   }
 
@@ -65,6 +68,7 @@ class FirestoreNoteModel {
       mediaUrls: mediaUrls,
       ownerId: ownerId,
       isVault: isVault,
+      reminderAt: reminderAt,
     );
   }
 
@@ -83,6 +87,7 @@ class FirestoreNoteModel {
       mediaUrls: List<String>.from(json['mediaUrls'] ?? []),
       ownerId: json['ownerId'] as String? ?? '',
       isVault: json['isVault'] as bool? ?? false,
+      reminderAt: (json['reminderAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -99,6 +104,7 @@ class FirestoreNoteModel {
       'folderId': folderId,
       'mediaUrls': mediaUrls,
       'isVault': isVault,
+      'reminderAt': reminderAt != null ? Timestamp.fromDate(reminderAt!) : null,
     };
   }
 }

@@ -21,6 +21,7 @@ class IsarNoteModel {
   late bool isDeleted;
   late bool isSynced;
   late bool isVault;
+  DateTime? reminderAt;
 
   late List<String> tags;
   String? folderId;
@@ -45,6 +46,7 @@ class IsarNoteModel {
       ..isDeleted = entity.isDeleted
       ..isSynced = entity.isSynced
       ..isVault = entity.isVault
+      ..reminderAt = entity.reminderAt
       ..tags = entity.tags
       ..folderId = entity.folderId
       ..mediaUrls = entity.mediaUrls
@@ -66,6 +68,7 @@ class IsarNoteModel {
       mediaUrls: mediaUrls,
       ownerId: ownerId,
       isVault: isVault,
+      reminderAt: reminderAt,
     );
   }
 }
