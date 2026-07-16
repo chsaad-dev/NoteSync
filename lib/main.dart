@@ -19,6 +19,7 @@ import 'presentation/screens/home/home_screen.dart';
 
 import 'firebase_options.dart';
 import 'core/notifications/notification_manager.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'domain/repository/note_repository.dart';
 import 'presentation/screens/note_editor/note_editor_screen.dart';
 import 'package:home_widget/home_widget.dart';
@@ -115,22 +116,33 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   }
 
   void _setupNotificationClickListener() {
-    _notificationSubscription = NotificationManager.selectNotificationStream.stream.listen((noteId) async {
-      if (noteId != null && noteId.isNotEmpty) {
-        final repo = di.sl<NoteRepository>();
-        final result = await repo.getNoteById(noteId);
-        result.fold(
-          (note) {
-            if (note != null) {
-              navigatorKey.currentState?.push(
-                MaterialPageRoute(builder: (context) => NoteEditorScreen(note: note)),
-              );
-            }
-          },
-          (_) {},
-        );
+    _notificationSubscription = NotificationManager.selectNotificationStream.stream.listen(_navigateToNote);
+
+    // Handle launch from terminated state via notification click
+    FlutterLocalNotificationsPlugin().getNotificationAppLaunchDetails().then((details) {
+      if (details != null && details.didNotificationLaunchApp) {
+        final payload = details.notificationResponse?.payload;
+        if (payload != null && payload.isNotEmpty) {
+          _navigateToNote(payload);
+        }
       }
     });
+  }
+
+  void _navigateToNote(String? noteId) async {
+    if (noteId == null || noteId.isEmpty) return;
+    final repo = di.sl<NoteRepository>();
+    final result = await repo.getNoteById(noteId);
+    result.fold(
+      (note) {
+        if (note != null) {
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(builder: (context) => NoteEditorScreen(note: note)),
+          );
+        }
+      },
+      (_) {},
+    );
   }
 
   void _setupWidgetClickListener() {

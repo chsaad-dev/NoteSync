@@ -49,7 +49,13 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
 
   void initNote(NoteEntity? existingNote) {
     if (existingNote != null) {
-      state = NoteEditorState(note: existingNote);
+      if (existingNote.reminderAt != null && existingNote.reminderAt!.isBefore(DateTime.now())) {
+        final cleared = existingNote.copyWith(clearReminder: true);
+        state = NoteEditorState(note: cleared);
+        _repository.saveNote(cleared);
+      } else {
+        state = NoteEditorState(note: existingNote);
+      }
     } else {
       final userState = _ref.read(authProvider);
       String ownerId = '';
@@ -94,7 +100,8 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
       folderId: folderId ?? currentNote.folderId,
       isPinned: isPinned ?? currentNote.isPinned,
       isVault: isVault ?? currentNote.isVault,
-      reminderAt: clearReminder ? null : (reminderAt ?? currentNote.reminderAt),
+      reminderAt: reminderAt,
+      clearReminder: clearReminder,
       updatedAt: DateTime.now(),
       isSynced: false,
     );

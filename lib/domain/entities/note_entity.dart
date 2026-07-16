@@ -46,6 +46,7 @@ class NoteEntity {
     String? ownerId,
     bool? isVault,
     DateTime? reminderAt,
+    bool clearReminder = false,
   }) {
     return NoteEntity(
       noteId: noteId ?? this.noteId,
@@ -61,7 +62,7 @@ class NoteEntity {
       mediaUrls: mediaUrls ?? this.mediaUrls,
       ownerId: ownerId ?? this.ownerId,
       isVault: isVault ?? this.isVault,
-      reminderAt: reminderAt ?? this.reminderAt,
+      reminderAt: clearReminder ? null : (reminderAt ?? this.reminderAt),
     );
   }
 
