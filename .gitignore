@@ -58,3 +58,13 @@ android/key.properties
 build/
 .flutter-plugins
 cloudflare_worker/.wrangler/
+
+# Generated Plugin Registrants (macOS, Windows, Linux)
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Flutter/ephemeral/
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugins.cmake
+windows/flutter/ephemeral/
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugins.cmake
+linux/flutter/ephemeral/
