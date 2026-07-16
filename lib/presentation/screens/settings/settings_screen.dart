@@ -80,9 +80,37 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildColorDot(WidgetRef ref, String colorKey, Color color, String activeKey) {
+    final isActive = colorKey == activeKey;
+    return GestureDetector(
+      onTap: () => ref.read(themeProvider.notifier).setPrimaryColor(colorKey),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: isActive
+              ? Border.all(color: Colors.white, width: 3)
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.4),
+              blurRadius: isActive ? 8 : 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: isActive
+            ? const Icon(Icons.check, color: Colors.white, size: 20)
+            : null,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeProvider);
+    final themeState = ref.watch(themeProvider);
     final biometricState = ref.watch(biometricProvider);
     final syncState = ref.watch(syncProvider);
     final authState = ref.watch(authProvider);
@@ -126,14 +154,103 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Card(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Theme Mode Selector
                 ListTile(
-                  leading: const Icon(Icons.dark_mode_outlined),
-                  title: const Text('Dark Mode'),
-                  subtitle: const Text('Toggle between dark and light themes'),
-                  trailing: Switch(
-                    value: themeMode == ThemeMode.dark,
-                    onChanged: (_) => ref.read(themeProvider.notifier).toggleTheme(),
+                  leading: const Icon(Icons.palette_outlined),
+                  title: const Text('Theme Mode'),
+                  subtitle: const Text('Select how NoteSync should look'),
+                  trailing: DropdownButton<ThemeMode>(
+                    value: themeState.themeMode,
+                    underline: const SizedBox(),
+                    onChanged: (mode) {
+                      if (mode != null) {
+                        ref.read(themeProvider.notifier).setThemeMode(mode);
+                      }
+                    },
+                    items: const [
+                      DropdownMenuItem(
+                        value: ThemeMode.system,
+                        child: Text('System'),
+                      ),
+                      DropdownMenuItem(
+                        value: ThemeMode.light,
+                        child: Text('Light'),
+                      ),
+                      DropdownMenuItem(
+                        value: ThemeMode.dark,
+                        child: Text('Dark'),
+                      ),
+                    ],
+                  ),
+                ),
+                // OLED Pure Black Switch (Only visible if Dark or System mode selected)
+                if (themeState.themeMode != ThemeMode.light) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.brightness_2_outlined),
+                    title: const Text('OLED Pure Black'),
+                    subtitle: const Text('Use solid pitch black in dark theme'),
+                    trailing: Switch(
+                      value: themeState.isPureBlack,
+                      onChanged: (val) => ref.read(themeProvider.notifier).setPureBlack(val),
+                    ),
+                  ),
+                ],
+                const Divider(height: 1),
+                // Typography selector
+                ListTile(
+                  leading: const Icon(Icons.font_download_outlined),
+                  title: const Text('Typography Font'),
+                  subtitle: const Text('Change the app text style'),
+                  trailing: DropdownButton<String>(
+                    value: themeState.fontFamilyKey,
+                    underline: const SizedBox(),
+                    onChanged: (fontKey) {
+                      if (fontKey != null) {
+                        ref.read(themeProvider.notifier).setFontFamily(fontKey);
+                      }
+                    },
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'sansSerif',
+                        child: Text('Modern Sans'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'serif',
+                        child: Text('Elegant Serif'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'monospace',
+                        child: Text('Technical Mono'),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Color Seed Selector
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Primary Accent Color',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildColorDot(ref, 'indigo', const Color(0xFF6366F1), themeState.primaryColorKey),
+                          _buildColorDot(ref, 'teal', const Color(0xFF0D9488), themeState.primaryColorKey),
+                          _buildColorDot(ref, 'pink', const Color(0xFFEC4899), themeState.primaryColorKey),
+                          _buildColorDot(ref, 'amber', const Color(0xFFD97706), themeState.primaryColorKey),
+                          _buildColorDot(ref, 'purple', const Color(0xFF8B5CF6), themeState.primaryColorKey),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const Divider(height: 1),

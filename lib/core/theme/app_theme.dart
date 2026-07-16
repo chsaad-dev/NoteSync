@@ -1,91 +1,70 @@
 import 'package:flutter/material.dart';
+import '../../presentation/providers/theme_provider.dart';
 
 class AppTheme {
-  static ThemeData get lightTheme {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.light,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF6366F1), // Modern Indigo
-        brightness: Brightness.light,
-        primary: const Color(0xFF6366F1),
-        secondary: const Color(0xFFEC4899), // Vibrant Pink
-        background: const Color(0xFFF9FAFB),
-        surface: Colors.white,
-      ),
-      scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.shade200),
-        ),
-      ),
-      appBarTheme: const AppBarTheme(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        titleTextStyle: TextStyle(
-          color: Color(0xFF1F2937),
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-        iconTheme: IconThemeData(color: Color(0xFF1F2937)),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.grey.shade100,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
-        ),
-      ),
-    );
-  }
+  static ThemeData buildTheme(CustomThemeState themeState, {required bool isDark}) {
+    final primaryColor = themeState.primaryColor;
+    final fontFamily = themeState.fontFamily;
 
-  static ThemeData get darkTheme {
+    // Determine colors based on dark mode vs light mode and pure black settings
+    final Color scaffoldBg;
+    final Color surfaceColor;
+    final Color cardBorderColor;
+
+    if (isDark) {
+      if (themeState.isPureBlack) {
+        scaffoldBg = const Color(0xFF000000);
+        surfaceColor = const Color(0xFF121212);
+        cardBorderColor = const Color(0xFF222222);
+      } else {
+        scaffoldBg = const Color(0xFF0F172A); // Slate 900
+        surfaceColor = const Color(0xFF1E293B); // Slate 800
+        cardBorderColor = const Color(0xFF334155).withOpacity(0.3);
+      }
+    } else {
+      scaffoldBg = const Color(0xFFF9FAFB);
+      surfaceColor = Colors.white;
+      cardBorderColor = Colors.grey.shade200;
+    }
+
+    final ColorScheme colorScheme = ColorScheme.fromSeed(
+      seedColor: primaryColor,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      primary: primaryColor,
+      secondary: const Color(0xFFEC4899), // Vibrant Pink
+      background: scaffoldBg,
+      surface: surfaceColor,
+    );
+
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF818CF8), // Indigo Light
-        brightness: Brightness.dark,
-        primary: const Color(0xFF818CF8),
-        secondary: const Color(0xFFF472B6), // Pink Light
-        background: const Color(0xFF0F172A), // Slate 900
-        surface: const Color(0xFF1E293B), // Slate 800
-      ),
-      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: scaffoldBg,
+      fontFamily: fontFamily,
       cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: const Color(0xFF334155).withOpacity(0.3)),
+          side: BorderSide(color: cardBorderColor),
         ),
-        color: const Color(0xFF1E293B),
+        color: surfaceColor,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         elevation: 0,
         backgroundColor: Colors.transparent,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          color: isDark ? Colors.white : const Color(0xFF1F2937),
           fontSize: 20,
           fontWeight: FontWeight.bold,
+          fontFamily: fontFamily,
         ),
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: isDark ? Colors.white : const Color(0xFF1F2937)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF1E293B),
+        fillColor: isDark ? surfaceColor : Colors.grey.shade100,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -96,7 +75,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF818CF8), width: 1.5),
+          borderSide: BorderSide(color: primaryColor, width: 1.5),
         ),
       ),
     );

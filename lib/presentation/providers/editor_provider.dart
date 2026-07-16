@@ -4,6 +4,8 @@ import 'package:uuid/uuid.dart';
 import '../../core/di/injection_container.dart';
 import '../../domain/entities/note_entity.dart';
 import '../../domain/repository/note_repository.dart';
+import '../../core/notifications/notification_manager.dart';
+import '../../core/utils/quill_helper.dart';
 import 'auth_provider.dart';
 
 class NoteEditorState {
@@ -79,6 +81,8 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
     String? folderId,
     bool? isPinned,
     bool? isVault,
+    DateTime? reminderAt,
+    bool clearReminder = false,
   }) {
     final currentNote = state.note;
     if (currentNote == null) return;
@@ -90,6 +94,7 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
       folderId: folderId ?? currentNote.folderId,
       isPinned: isPinned ?? currentNote.isPinned,
       isVault: isVault ?? currentNote.isVault,
+      reminderAt: clearReminder ? null : (reminderAt ?? currentNote.reminderAt),
       updatedAt: DateTime.now(),
       isSynced: false,
     );
@@ -122,6 +127,29 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
     result.fold(
       (success) {
         state = state.copyWith(isSaving: false);
+
+        // Schedule or cancel notification reminder
+        final notificationId = currentNote.noteId.hashCode & 0x7FFFFFFF;
+        if (currentNote.reminderAt != null && currentNote.reminderAt!.isAfter(DateTime.now())) {
+          String previewText = 'Tap to open note';
+          if (currentNote.body.isNotEmpty) {
+            try {
+              final text = QuillHelper.toPlainText(currentNote.body);
+              if (text.trim().isNotEmpty) {
+                previewText = text.length > 50 ? '${text.substring(0, 50)}...' : text;
+              }
+            } catch (_) {}
+          }
+          NotificationManager.scheduleNotification(
+            id: notificationId,
+            title: currentNote.title.isNotEmpty ? currentNote.title : 'Reminder',
+            body: previewText,
+            scheduledDate: currentNote.reminderAt!,
+            payload: currentNote.noteId,
+          );
+        } else {
+          NotificationManager.cancelNotification(notificationId);
+        }
       },
       (failure) {
         state = state.copyWith(isSaving: false, error: failure.message);
