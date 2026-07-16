@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_background">
+
+    <!-- Header Row -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/txt_header"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pinned Notes"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true" />
+
+        <ImageButton
+            android:id="@+id/btn_quick_capture"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_input_add"
+            android:contentDescription="Quick Capture"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true" />
+    </RelativeLayout>
+
+    <!-- Empty State -->
+    <TextView
+        android:id="@+id/txt_no_pinned"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="No pinned notes"
+        android:textColor="#888888"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <!-- Notes Container (slots) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Slot 0 -->
+        <LinearLayout
+            android:id="@+id/layout_note_0"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/widget_item_background"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/txt_title_0"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Note Title 1"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/txt_body_0"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Note Body 1 preview"
+                android:textColor="#AAAAAA"
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Slot 1 -->
+        <LinearLayout
+            android:id="@+id/layout_note_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/widget_item_background"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/txt_title_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Note Title 2"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/txt_body_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Note Body 2 preview"
+                android:textColor="#AAAAAA"
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Slot 2 -->
+        <LinearLayout
+            android:id="@+id/layout_note_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:background="@drawable/widget_item_background"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/txt_title_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Note Title 3"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/txt_body_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Note Body 3 preview"
+                android:textColor="#AAAAAA"
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
