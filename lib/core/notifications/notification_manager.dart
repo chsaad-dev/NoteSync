@@ -14,8 +14,8 @@ class NotificationManager {
   static Future<void> init() async {
     tz.initializeTimeZones();
     try {
-      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      final timezone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timezone.identifier));
     } catch (e) {
       tz.setLocalLocation(tz.getLocation('UTC'));
     }
