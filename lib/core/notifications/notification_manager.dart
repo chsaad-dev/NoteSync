@@ -37,8 +37,9 @@ class NotificationManager {
     final androidPlugin = _notificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-    await androidPlugin?.requestNotificationsPermission();
-    await androidPlugin?.requestExactAlarmsPermission();
+    // Request permissions asynchronously in the background so we do not block app startup
+    androidPlugin?.requestNotificationsPermission();
+    androidPlugin?.requestExactAlarmsPermission();
   }
 
   static Future<void> scheduleNotification({

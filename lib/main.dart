@@ -29,33 +29,40 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationManager.init();
   
-  // Load Dotenv Configuration first so environment variables are available during Firebase options resolution
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (e) {
-    debugPrint('Failed to load .env: $e');
-  }
+  // Start initializing notifications asynchronously
+  final initNotificationsFuture = NotificationManager.init();
 
-  // Initialize Firebase (safely catches exceptions if local configurations are missing)
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e, stack) {
-    debugPrint('Firebase initialization failed: $e');
-    debugPrint('Stack trace: $stack');
-  }
+  // Load dotenv and initialize Firebase in parallel
+  final dotenvFuture = dotenv.load(fileName: '.env').catchError((e) {
+    debugPrint('Failed to load .env: $e');
+  });
+
+  final firebaseFuture = () async {
+    try {
+      return await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e) {
+      debugPrint('Firebase initialization failed: $e');
+      return null;
+    }
+  }();
+
+  // Wait for dotenv and Firebase to finish loading
+  await Future.wait([dotenvFuture, firebaseFuture]);
 
   final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
   final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? 'your_cloudinary_cloud_name';
 
-  // Initialize dependencies
+  // Initialize dependencies (requires dotenv to be loaded)
   await di.init(
     workerUrl: workerUrl,
     cloudinaryCloudName: cloudName,
   );
+
+  // Ensure notification system has completed initialization
+  await initNotificationsFuture;
 
   runApp(
     const ProviderScope(
