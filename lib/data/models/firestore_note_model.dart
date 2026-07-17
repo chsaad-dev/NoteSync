@@ -16,6 +16,8 @@ class FirestoreNoteModel {
   final String ownerId;
   final bool isVault;
   final DateTime? reminderAt;
+  final bool isPublic;
+  final String? publicUrlId;
 
   FirestoreNoteModel({
     required this.noteId,
@@ -32,6 +34,8 @@ class FirestoreNoteModel {
     required this.ownerId,
     this.isVault = false,
     this.reminderAt,
+    this.isPublic = false,
+    this.publicUrlId,
   });
 
   factory FirestoreNoteModel.fromEntity(NoteEntity entity) {
@@ -50,6 +54,8 @@ class FirestoreNoteModel {
       ownerId: entity.ownerId,
       isVault: entity.isVault,
       reminderAt: entity.reminderAt,
+      isPublic: entity.isPublic,
+      publicUrlId: entity.publicUrlId,
     );
   }
 
@@ -69,6 +75,8 @@ class FirestoreNoteModel {
       ownerId: ownerId,
       isVault: isVault,
       reminderAt: reminderAt,
+      isPublic: isPublic,
+      publicUrlId: publicUrlId,
     );
   }
 
@@ -88,6 +96,8 @@ class FirestoreNoteModel {
       ownerId: json['ownerId'] as String? ?? '',
       isVault: json['isVault'] as bool? ?? false,
       reminderAt: (json['reminderAt'] as Timestamp?)?.toDate(),
+      isPublic: json['isPublic'] as bool? ?? false,
+      publicUrlId: json['publicUrlId'] as String?,
     );
   }
 
@@ -105,6 +115,8 @@ class FirestoreNoteModel {
       'mediaUrls': mediaUrls,
       'isVault': isVault,
       'reminderAt': reminderAt != null ? Timestamp.fromDate(reminderAt!) : null,
+      'isPublic': isPublic,
+      'publicUrlId': publicUrlId,
     };
   }
 }

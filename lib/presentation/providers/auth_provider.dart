@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/di/injection_container.dart';
+import '../../core/security/session_manager.dart';
 
 sealed class AuthState {
   const AuthState();
@@ -37,11 +38,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   );
 
   AuthNotifier(this._auth) : super(const AuthInitial()) {
-    _auth.authStateChanges().listen((user) {
+    _auth.authStateChanges().listen((user) async {
       if (user != null) {
         state = Authenticated(user);
+        await SessionManager.updateSession(user.uid);
+        await SessionManager.setupRevocationListener(user.uid, () async {
+          await SessionManager.performLocalWipeAndLogout();
+        });
       } else {
         state = const Unauthenticated();
+        await SessionManager.cancelRevocationListener();
       }
     });
   }

@@ -16,5 +16,11 @@ service cloud.firestore {
                     && request.auth.uid == uid 
                     && request.resource.data.ownerId == uid;
     }
+
+    // Public notes collection - client writes are blocked (Worker Admin only)
+    match /public_notes/{noteId} {
+      allow read: if true;
+      allow write, delete: if false;
+    }
   }
 }

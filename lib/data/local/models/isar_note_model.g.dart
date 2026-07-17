@@ -42,53 +42,63 @@ const IsarNoteModelSchema = CollectionSchema(
       name: r'isPinned',
       type: IsarType.bool,
     ),
-    r'isSynced': PropertySchema(
+    r'isPublic': PropertySchema(
       id: 5,
+      name: r'isPublic',
+      type: IsarType.bool,
+    ),
+    r'isSynced': PropertySchema(
+      id: 6,
       name: r'isSynced',
       type: IsarType.bool,
     ),
     r'isVault': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'isVault',
       type: IsarType.bool,
     ),
     r'iv': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'iv',
       type: IsarType.string,
     ),
     r'mediaUrls': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'mediaUrls',
       type: IsarType.stringList,
     ),
     r'noteId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'noteId',
       type: IsarType.string,
     ),
     r'ownerId': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'ownerId',
       type: IsarType.string,
     ),
+    r'publicUrlId': PropertySchema(
+      id: 12,
+      name: r'publicUrlId',
+      type: IsarType.string,
+    ),
     r'reminderAt': PropertySchema(
-      id: 11,
+      id: 13,
       name: r'reminderAt',
       type: IsarType.dateTime,
     ),
     r'tags': PropertySchema(
-      id: 12,
+      id: 14,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'title': PropertySchema(
-      id: 13,
+      id: 15,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 14,
+      id: 16,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -144,6 +154,12 @@ int _isarNoteModelEstimateSize(
   }
   bytesCount += 3 + object.noteId.length * 3;
   bytesCount += 3 + object.ownerId.length * 3;
+  {
+    final value = object.publicUrlId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.tags.length * 3;
   {
     for (var i = 0; i < object.tags.length; i++) {
@@ -166,16 +182,18 @@ void _isarNoteModelSerialize(
   writer.writeString(offsets[2], object.folderId);
   writer.writeBool(offsets[3], object.isDeleted);
   writer.writeBool(offsets[4], object.isPinned);
-  writer.writeBool(offsets[5], object.isSynced);
-  writer.writeBool(offsets[6], object.isVault);
-  writer.writeString(offsets[7], object.iv);
-  writer.writeStringList(offsets[8], object.mediaUrls);
-  writer.writeString(offsets[9], object.noteId);
-  writer.writeString(offsets[10], object.ownerId);
-  writer.writeDateTime(offsets[11], object.reminderAt);
-  writer.writeStringList(offsets[12], object.tags);
-  writer.writeString(offsets[13], object.title);
-  writer.writeDateTime(offsets[14], object.updatedAt);
+  writer.writeBool(offsets[5], object.isPublic);
+  writer.writeBool(offsets[6], object.isSynced);
+  writer.writeBool(offsets[7], object.isVault);
+  writer.writeString(offsets[8], object.iv);
+  writer.writeStringList(offsets[9], object.mediaUrls);
+  writer.writeString(offsets[10], object.noteId);
+  writer.writeString(offsets[11], object.ownerId);
+  writer.writeString(offsets[12], object.publicUrlId);
+  writer.writeDateTime(offsets[13], object.reminderAt);
+  writer.writeStringList(offsets[14], object.tags);
+  writer.writeString(offsets[15], object.title);
+  writer.writeDateTime(offsets[16], object.updatedAt);
 }
 
 IsarNoteModel _isarNoteModelDeserialize(
@@ -191,16 +209,18 @@ IsarNoteModel _isarNoteModelDeserialize(
   object.id = id;
   object.isDeleted = reader.readBool(offsets[3]);
   object.isPinned = reader.readBool(offsets[4]);
-  object.isSynced = reader.readBool(offsets[5]);
-  object.isVault = reader.readBool(offsets[6]);
-  object.iv = reader.readString(offsets[7]);
-  object.mediaUrls = reader.readStringList(offsets[8]) ?? [];
-  object.noteId = reader.readString(offsets[9]);
-  object.ownerId = reader.readString(offsets[10]);
-  object.reminderAt = reader.readDateTimeOrNull(offsets[11]);
-  object.tags = reader.readStringList(offsets[12]) ?? [];
-  object.title = reader.readString(offsets[13]);
-  object.updatedAt = reader.readDateTime(offsets[14]);
+  object.isPublic = reader.readBool(offsets[5]);
+  object.isSynced = reader.readBool(offsets[6]);
+  object.isVault = reader.readBool(offsets[7]);
+  object.iv = reader.readString(offsets[8]);
+  object.mediaUrls = reader.readStringList(offsets[9]) ?? [];
+  object.noteId = reader.readString(offsets[10]);
+  object.ownerId = reader.readString(offsets[11]);
+  object.publicUrlId = reader.readStringOrNull(offsets[12]);
+  object.reminderAt = reader.readDateTimeOrNull(offsets[13]);
+  object.tags = reader.readStringList(offsets[14]) ?? [];
+  object.title = reader.readString(offsets[15]);
+  object.updatedAt = reader.readDateTime(offsets[16]);
   return object;
 }
 
@@ -226,20 +246,24 @@ P _isarNoteModelDeserializeProp<P>(
     case 6:
       return (reader.readBool(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 8:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 9:
       return (reader.readString(offset)) as P;
+    case 9:
+      return (reader.readStringList(offset) ?? []) as P;
     case 10:
       return (reader.readString(offset)) as P;
     case 11:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 12:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 13:
       return (reader.readString(offset)) as P;
+    case 12:
+      return (reader.readStringOrNull(offset)) as P;
+    case 13:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 14:
+      return (reader.readStringList(offset) ?? []) as P;
+    case 15:
+      return (reader.readString(offset)) as P;
+    case 16:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -874,6 +898,16 @@ extension IsarNoteModelQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isPinned',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      isPublicEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isPublic',
         value: value,
       ));
     });
@@ -1531,6 +1565,160 @@ extension IsarNoteModelQueryFilter
   }
 
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'publicUrlId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'publicUrlId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'publicUrlId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'publicUrlId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'publicUrlId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'publicUrlId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'publicUrlId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'publicUrlId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'publicUrlId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'publicUrlId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'publicUrlId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
+      publicUrlIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'publicUrlId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterFilterCondition>
       reminderAtIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -2096,6 +2284,19 @@ extension IsarNoteModelQuerySortBy
     });
   }
 
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> sortByIsPublic() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPublic', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy>
+      sortByIsPublicDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPublic', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> sortByIsSynced() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isSynced', Sort.asc);
@@ -2154,6 +2355,19 @@ extension IsarNoteModelQuerySortBy
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> sortByOwnerIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ownerId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> sortByPublicUrlId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'publicUrlId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy>
+      sortByPublicUrlIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'publicUrlId', Sort.desc);
     });
   }
 
@@ -2276,6 +2490,19 @@ extension IsarNoteModelQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> thenByIsPublic() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPublic', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy>
+      thenByIsPublicDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPublic', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> thenByIsSynced() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isSynced', Sort.asc);
@@ -2334,6 +2561,19 @@ extension IsarNoteModelQuerySortThenBy
   QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> thenByOwnerIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ownerId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy> thenByPublicUrlId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'publicUrlId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QAfterSortBy>
+      thenByPublicUrlIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'publicUrlId', Sort.desc);
     });
   }
 
@@ -2411,6 +2651,12 @@ extension IsarNoteModelQueryWhereDistinct
     });
   }
 
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QDistinct> distinctByIsPublic() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isPublic');
+    });
+  }
+
   QueryBuilder<IsarNoteModel, IsarNoteModel, QDistinct> distinctByIsSynced() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isSynced');
@@ -2447,6 +2693,13 @@ extension IsarNoteModelQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'ownerId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, IsarNoteModel, QDistinct> distinctByPublicUrlId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'publicUrlId', caseSensitive: caseSensitive);
     });
   }
 
@@ -2515,6 +2768,12 @@ extension IsarNoteModelQueryProperty
     });
   }
 
+  QueryBuilder<IsarNoteModel, bool, QQueryOperations> isPublicProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isPublic');
+    });
+  }
+
   QueryBuilder<IsarNoteModel, bool, QQueryOperations> isSyncedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isSynced');
@@ -2549,6 +2808,12 @@ extension IsarNoteModelQueryProperty
   QueryBuilder<IsarNoteModel, String, QQueryOperations> ownerIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'ownerId');
+    });
+  }
+
+  QueryBuilder<IsarNoteModel, String?, QQueryOperations> publicUrlIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'publicUrlId');
     });
   }
 

@@ -25,6 +25,8 @@ import '../../domain/usecases/watch_vault_notes.dart';
 import '../../domain/usecases/rename_folder.dart';
 import '../../domain/usecases/delete_folder.dart';
 import '../security/encryption_service.dart';
+import '../services/backup_service.dart';
+
 
 final sl = GetIt.instance;
 
@@ -149,5 +151,10 @@ Future<void> init({
   }
   if (!sl.isRegistered<DeleteFolder>()) {
     sl.registerLazySingleton<DeleteFolder>(() => DeleteFolder(sl()));
+  }
+
+  // Backup Service
+  if (!sl.isRegistered<BackupService>()) {
+    sl.registerLazySingleton<BackupService>(() => BackupService(sl()));
   }
 }

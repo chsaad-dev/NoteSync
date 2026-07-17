@@ -41,12 +41,16 @@ class CloudinaryService {
       throw Exception('File does not exist at $filePath');
     }
 
+    final fileSize = await file.length();
     final signResponse = await http.post(
       Uri.parse('$_workerUrl/sign-upload'),
       headers: {
         'Authorization': 'Bearer $idToken',
         'Content-Type': 'application/json',
       },
+      body: json.encode({
+        'fileSize': fileSize,
+      }),
     );
 
     if (signResponse.statusCode != 200) {
@@ -90,6 +94,22 @@ class CloudinaryService {
       throw Exception('Cloudinary upload failed: ${response.body}');
     }
 
+    // Call commit endpoint on Worker to register server-side storage usage increment
+    final commitResponse = await http.post(
+      Uri.parse('$_workerUrl/commit-upload'),
+      headers: {
+        'Authorization': 'Bearer $idToken',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'fileSize': fileSize,
+      }),
+    );
+
+    if (commitResponse.statusCode != 200) {
+      throw Exception('Worker /commit-upload failed (${commitResponse.statusCode}): ${commitResponse.body}');
+    }
+
     final responseData = json.decode(response.body) as Map<String, dynamic>;
     return responseData['secure_url'] as String;
   }
@@ -100,6 +120,17 @@ class CloudinaryService {
       throw Exception('Invalid Cloudinary URL structure');
     }
 
+    // Fetch Content-Length size of media file on Cloudinary using a quick HEAD request
+    int fileSize = 0;
+    try {
+      final headResp = await http.head(Uri.parse(mediaUrl));
+      if (headResp.statusCode == 200) {
+        fileSize = int.parse(headResp.headers['content-length'] ?? '0');
+      }
+    } catch (_) {
+      // Fallback
+    }
+
     final deleteResponse = await http.post(
       Uri.parse('$_workerUrl/delete-media'),
       headers: {
@@ -108,6 +139,7 @@ class CloudinaryService {
       },
       body: json.encode({
         'public_id': publicId,
+        'file_size': fileSize,
       }),
     );
 

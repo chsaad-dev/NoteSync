@@ -1,12 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
+
 import '../../core/di/injection_container.dart';
 import '../../domain/entities/note_entity.dart';
 import '../../domain/repository/note_repository.dart';
 import '../../core/notifications/notification_manager.dart';
 import '../../core/utils/quill_helper.dart';
 import 'auth_provider.dart';
+
 
 class NoteEditorState {
   final NoteEntity? note;
@@ -224,6 +230,95 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
 
     // Call deleteMedia in background (fails silently if offline, will be cleaned up in worker later)
     await _repository.deleteMedia(url);
+  }
+
+  Future<void> publishNote() async {
+    final currentNote = state.note;
+    if (currentNote == null) return;
+
+    state = state.copyWith(isSaving: true, error: null);
+
+    try {
+      final user = fb.FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+      final idToken = await user.getIdToken();
+
+      final publicUrlId = const Uuid().v4();
+      final contentHtml = QuillHelper.toHtml(currentNote.body);
+
+      final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
+      final response = await http.post(
+        Uri.parse('$workerUrl/publish-note'),
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'noteId': currentNote.noteId,
+          'publicUrlId': publicUrlId,
+          'title': currentNote.title.isNotEmpty ? currentNote.title : 'Untitled',
+          'contentHtml': contentHtml,
+          'mediaUrls': currentNote.mediaUrls,
+          'createdAt': currentNote.createdAt.toIso8601String(),
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to publish note: ${response.body}');
+      }
+
+      // Update local state and save to sync
+      final updated = currentNote.copyWith(
+        isPublic: true,
+        publicUrlId: publicUrlId,
+        isSynced: false,
+      );
+      state = state.copyWith(note: updated, isSaving: false);
+      await save();
+    } catch (e) {
+      state = state.copyWith(isSaving: false, error: e.toString());
+    }
+  }
+
+  Future<void> unpublishNote() async {
+    final currentNote = state.note;
+    if (currentNote == null || currentNote.publicUrlId == null) return;
+
+    state = state.copyWith(isSaving: true, error: null);
+
+    try {
+      final user = fb.FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+      final idToken = await user.getIdToken();
+
+      final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
+      final response = await http.post(
+        Uri.parse('$workerUrl/unpublish-note'),
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'noteId': currentNote.noteId,
+          'publicUrlId': currentNote.publicUrlId,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to unpublish note: ${response.body}');
+      }
+
+      // Update local state and save to sync
+      final updated = currentNote.copyWith(
+        isPublic: false,
+        clearPublicUrlId: true,
+        isSynced: false,
+      );
+      state = state.copyWith(note: updated, isSaving: false);
+      await save();
+    } catch (e) {
+      state = state.copyWith(isSaving: false, error: e.toString());
+    }
   }
 
   @override
