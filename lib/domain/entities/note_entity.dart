@@ -13,6 +13,8 @@ class NoteEntity {
   final String ownerId;
   final bool isVault;
   final DateTime? reminderAt;
+  final bool isPublic;
+  final String? publicUrlId;
 
   const NoteEntity({
     required this.noteId,
@@ -29,6 +31,8 @@ class NoteEntity {
     required this.ownerId,
     this.isVault = false,
     this.reminderAt,
+    this.isPublic = false,
+    this.publicUrlId,
   });
 
   NoteEntity copyWith({
@@ -47,6 +51,9 @@ class NoteEntity {
     bool? isVault,
     DateTime? reminderAt,
     bool clearReminder = false,
+    bool? isPublic,
+    String? publicUrlId,
+    bool clearPublicUrlId = false,
   }) {
     return NoteEntity(
       noteId: noteId ?? this.noteId,
@@ -63,6 +70,8 @@ class NoteEntity {
       ownerId: ownerId ?? this.ownerId,
       isVault: isVault ?? this.isVault,
       reminderAt: clearReminder ? null : (reminderAt ?? this.reminderAt),
+      isPublic: isPublic ?? this.isPublic,
+      publicUrlId: clearPublicUrlId ? null : (publicUrlId ?? this.publicUrlId),
     );
   }
 
@@ -84,7 +93,9 @@ class NoteEntity {
           mediaUrls == other.mediaUrls &&
           ownerId == other.ownerId &&
           isVault == other.isVault &&
-          reminderAt == other.reminderAt;
+          reminderAt == other.reminderAt &&
+          isPublic == other.isPublic &&
+          publicUrlId == other.publicUrlId;
 
   @override
   int get hashCode =>
@@ -101,5 +112,7 @@ class NoteEntity {
       mediaUrls.hashCode ^
       ownerId.hashCode ^
       isVault.hashCode ^
-      reminderAt.hashCode;
+      reminderAt.hashCode ^
+      isPublic.hashCode ^
+      publicUrlId.hashCode;
 }

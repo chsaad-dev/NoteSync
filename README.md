@@ -8,7 +8,10 @@ NoteSync is a production-grade, offline-first notes application with cloud synch
 - **Offline-First CRUD**: All note writes immediately hit Isar local DB and update the UI reactively.
 - **Background Sync**: Automatic two-way cloud syncing triggered on app resume, connection recovery, or via a 2-minute periodic timer.
 - **Conflict Resolution**: Timestamps within 5 seconds trigger a conflict copy (older note appended with `(conflict copy)`); otherwise, Last-Write-Wins (LWW) applies.
-- **Media Upload Proxy**: Images and videos are directly uploaded to Cloudinary via secure signed parameters from a Cloudflare Worker.
+- **Cloudinary Storage Limits**: Quotas limit user uploads (300MB default, fetched dynamically from Firestore `config/storage_limits` config document `defaultMaxStorageBytes`). The Worker validates files on `/sign-upload`, increments usage on `/commit-upload`, and decrements on `/delete-media`.
+- **Multi-Device Active Sessions**: Persistent `deviceId` mapping displays logged in metadata in settings. Revoking a session remotely triggers a live listener to sign out, delete local Isar database data, and clear secure storage.
+- **Encrypted ZIP Backup & Restore**: Export encrypted note ZIP archives using AES keys derived via PBKDF2 (SHA-256, 600,000 iterations) from user-entered passwords. Imports skip duplicate conflicts and render transaction metrics.
+- **Public Read-Only Web Links**: Notes can be published to `/public_notes` served as responsive read-only HTML by the Worker. Toggling sharing calls Worker POST `/publish-note` and `/unpublish-note` endpoints which verify owner credentials and modify Firestore using administrative RS256 token signatures. Firestore security rules prevent direct client writes.
 - **At-Rest Encryption**: Note bodies are encrypted locally in Isar using AES-256 (via the `encrypt` package) with keys stored in `FlutterSecureStorage`.
 - **Biometric Application Lock**: Optional FaceID/Fingerprint/PIN lock via `local_auth`.
 - **Account Data Purge**: Deleting an account triggers a secure worker endpoint to delete all Firestore documents and associated Cloudinary assets before signing out.
@@ -22,20 +25,21 @@ lib/
 ├── core/
 │   ├── di/            # Dependency injection (GetIt container)
 │   ├── errors/        # Sealed Result type and Failure representations
-│   ├── security/      # AES-256 Encryption Service
+│   ├── security/      # AES-256 Encryption & Session Manager
+│   ├── services/      # Password-encrypted ZIP backup/restore
 │   ├── theme/         # Modern Slate/Indigo design system theme tokens
-│   └── utils/         # Quill JSON delta parser
+│   └── utils/         # Quill JSON delta to text/HTML converters
 ├── data/
 │   ├── local/         # Isar Note collections and DAOs
 │   ├── remote/        # Firestore & Cloudinary media client sources
 │   ├── repository/    # NoteRepositoryImpl coordinating local & remote sync
 │   └── models/        # DTO converters (FirestoreNoteModel, IsarNoteModel)
 ├── domain/
-│   ├── entities/      # Pure Dart domain classes (NoteEntity)
+│   ├── entities/      # Pure Dart domain classes (NoteEntity, UserProfile)
 │   ├── repository/    # Abstract repository interfaces
 │   └── usecases/      # Clean architecture business actions (CreateNote, SyncNotes)
 ├── presentation/
-│   ├── screens/       # UI (Login, SignUp, Home Dashboard, Note Editor, Trash, Settings)
+│   ├── screens/       # UI (Login, Home, Settings, Sessions, Backup, Editor, etc.)
 │   ├── widgets/       # Shared presentation widgets
 │   └── providers/     # State management (Riverpod notifiers)
 └── main.dart          # Main application setup and lifecycle observers
@@ -49,7 +53,7 @@ lib/
 1. Create a Firebase project in the [Firebase Console](https://console.firebase.google.com/).
 2. Enable **Authentication** (Email/Password & Google Sign-in providers).
 3. Enable **Cloud Firestore** and select a server location.
-4. Copy [firestore.rules](file:///c:/Users/chsaa/Flutter%20Projects/firestore.rules) into your Firebase Console Rules tab or deploy using Firebase CLI.
+4. Copy `firestore.rules` into your Firebase Console Rules tab or deploy using Firebase CLI.
 5. Register your Flutter app by running `flutterfire configure` (requires Firebase CLI installed).
 
 ### 2. Cloudinary Account Setup
@@ -60,7 +64,7 @@ lib/
    - Enforce constraints like max file size or specific allowed formats (e.g. `jpg, png, webp, mp4`).
 
 ### 3. Deploying the Cloudflare Worker
-The backend proxy manages credentials security, Cloudinary uploads, and account purging.
+The backend proxy manages credentials security, Cloudinary uploads, session activity tracking, public note rendering, and account purging.
 
 1. Navigate to the `cloudflare_worker` folder.
 2. Initialize wrangler:
@@ -83,6 +87,8 @@ The backend proxy manages credentials security, Cloudinary uploads, and account 
    wrangler secret put CLOUDINARY_API_SECRET
    wrangler secret put CLOUDINARY_CLOUD_NAME
    wrangler secret put FIREBASE_PROJECT_ID
+   wrangler secret put CLIENT_EMAIL
+   wrangler secret put FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
    ```
 
 ### 4. Running the Flutter App

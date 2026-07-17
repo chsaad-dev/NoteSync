@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../domain/entities/note_entity.dart';
 import '../../../domain/repository/note_repository.dart';
 import '../../../core/di/injection_container.dart';
@@ -13,6 +15,7 @@ import '../../../core/utils/quill_helper.dart';
 import '../../providers/editor_provider.dart';
 import '../../providers/biometric_provider.dart';
 import '../../providers/notes_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import 'package:video_player/video_player.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
@@ -115,6 +118,18 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   void _pickMedia() async {
+    final profile = ref.read(userProfileProvider).value;
+    if (profile != null && profile.usedStorage >= profile.maxStorage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Warning: Cloud storage quota exceeded. Image/video uploads are disabled.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -249,7 +264,112 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         final content = '$titleText\n\n$plainText';
         await _exportFile(titleText, content, '.txt');
         break;
+      case 'public_share':
+        _showPublicLinkDialog(context, ref, note);
+        break;
     }
+  }
+
+  void _showPublicLinkDialog(BuildContext context, WidgetRef ref, NoteEntity note) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Consumer(
+          builder: (context, ref, child) {
+            final editorState = ref.watch(noteEditorProvider);
+            final currentNote = editorState.note ?? note;
+            final isSaving = editorState.isSaving;
+
+            final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
+            final publicUrl = '$workerUrl/public/note/${currentNote.publicUrlId}';
+
+            return AlertDialog(
+              title: const Text('Public Web Link'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Generating a public link uploads a decrypted copy of this note to a secure Cloudflare endpoint, allowing anyone with the link to view it.',
+                    style: TextStyle(fontSize: 13, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 16),
+                  if (currentNote.isPublic) ...[
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: SelectableText(
+                        publicUrl,
+                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      ),
+                    ),
+                  ] else ...[
+                    const Row(
+                      children: [
+                        Icon(Icons.lock_outline, color: Colors.grey, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'Sharing is currently disabled',
+                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                if (isSaving)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else ...[
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Close'),
+                  ),
+                  if (currentNote.isPublic) ...[
+                    TextButton(
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: publicUrl));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Link copied to clipboard')),
+                          );
+                        }
+                      },
+                      child: const Text('Copy Link'),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      onPressed: () async {
+                        await ref.read(noteEditorProvider.notifier).unpublishNote();
+                      },
+                      child: const Text('Disable Link'),
+                    ),
+                  ] else ...[
+                    ElevatedButton(
+                      onPressed: () async {
+                        await ref.read(noteEditorProvider.notifier).publishNote();
+                      },
+                      child: const Text('Enable Link'),
+                    ),
+                  ],
+                ],
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _exportFile(String title, String content, String extension) async {
@@ -612,6 +732,19 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     Icon(Icons.text_snippet, color: Colors.grey),
                     const SizedBox(width: 8),
                     Text('Export as Plain Text (.txt)'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'public_share',
+                child: Row(
+                  children: [
+                    Icon(
+                      note.isPublic ? Icons.public : Icons.public_off,
+                      color: Colors.blueAccent,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(note.isPublic ? 'Public Web Link' : 'Publish Note'),
                   ],
                 ),
               ),

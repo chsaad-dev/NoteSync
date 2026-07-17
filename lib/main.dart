@@ -24,6 +24,7 @@ import 'domain/repository/note_repository.dart';
 import 'presentation/screens/note_editor/note_editor_screen.dart';
 import 'package:home_widget/home_widget.dart';
 import 'presentation/providers/notes_provider.dart';
+import 'core/security/session_manager.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -310,6 +311,11 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       }
     } else if (state == AppLifecycleState.resumed) {
       _triggerBackgroundSync();
+      
+      final authState = ref.read(authProvider);
+      if (authState is Authenticated) {
+        SessionManager.updateSession(authState.user.uid);
+      }
       
       final biometric = ref.read(biometricProvider);
       if (biometric.isEnabled && biometric.isLocked) {

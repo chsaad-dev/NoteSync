@@ -4,8 +4,11 @@ import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/biometric_provider.dart';
 import '../../providers/sync_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../../core/di/injection_container.dart';
 import '../../../domain/usecases/delete_account.dart';
+import 'active_sessions_screen.dart';
+import 'backup_restore_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -114,6 +117,7 @@ class SettingsScreen extends ConsumerWidget {
     final biometricState = ref.watch(biometricProvider);
     final syncState = ref.watch(syncProvider);
     final authState = ref.watch(authProvider);
+    final userProfileAsync = ref.watch(userProfileProvider);
 
     // Format last synced time
     String syncTimeText = 'Never';
@@ -317,9 +321,48 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // Section: Account Management
+          // Section: Security & Backups
           const Text(
-            'ACCOUNT MANAGEMENT',
+            'SECURITY & BACKUPS',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.0, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.devices_other),
+                  title: const Text('Active Sessions'),
+                  subtitle: const Text('Manage logged in devices'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ActiveSessionsScreen()),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.settings_backup_restore),
+                  title: const Text('Backup & Restore'),
+                  subtitle: const Text('Export/import local notes archive'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const BackupRestoreScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Section: Account & Storage
+          const Text(
+            'ACCOUNT & STORAGE',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.0, color: Colors.grey),
           ),
           const SizedBox(height: 8),
@@ -331,6 +374,71 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Logged in as'),
                   subtitle: Text(
                     authState is Authenticated ? authState.user.email ?? '' : 'Offline User',
+                  ),
+                ),
+                const Divider(height: 1),
+                
+                // Storage limit progress bar
+                userProfileAsync.when(
+                  data: (profile) {
+                    if (profile == null) return const SizedBox.shrink();
+                    final usedMb = profile.usedStorage / (1024 * 1024);
+                    final maxMb = profile.maxStorage / (1024 * 1024);
+                    final percent = profile.maxStorage > 0 
+                        ? (profile.usedStorage / profile.maxStorage).clamp(0.0, 1.0)
+                        : 0.0;
+                    final isOverQuota = profile.usedStorage >= profile.maxStorage;
+
+                    return Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Cloud Storage Quota',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              Text(
+                                '${usedMb.toStringAsFixed(1)}MB / ${maxMb.toStringAsFixed(0)}MB',
+                                style: TextStyle(
+                                  fontSize: 12, 
+                                  fontWeight: FontWeight.bold,
+                                  color: isOverQuota ? Colors.red : Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: percent,
+                              minHeight: 8,
+                              backgroundColor: Colors.grey.shade200,
+                              color: isOverQuota ? Colors.red : Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          if (isOverQuota) ...[
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Warning: You have exceeded your storage limit. Image/video uploads are disabled.',
+                              style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (err, stack) => Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Error loading storage quota: $err', style: const TextStyle(fontSize: 12, color: Colors.red)),
                   ),
                 ),
                 const Divider(height: 1),
