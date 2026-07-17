@@ -27,48 +27,159 @@ import 'presentation/providers/notes_provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Start initializing notifications asynchronously
-  final initNotificationsFuture = NotificationManager.init();
+  runApp(const AppInitializer());
+}
 
-  // Load dotenv and initialize Firebase in parallel
-  final dotenvFuture = dotenv.load(fileName: '.env').catchError((e) {
-    debugPrint('Failed to load .env: $e');
-  });
+class AppInitializer extends StatefulWidget {
+  const AppInitializer({super.key});
 
-  final firebaseFuture = () async {
+  @override
+  State<AppInitializer> createState() => _AppInitializerState();
+}
+
+class _AppInitializerState extends State<AppInitializer> {
+  bool _initialized = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initApp();
+  }
+
+  Future<void> _initApp() async {
     try {
-      return await Firebase.initializeApp(
+      debugPrint('--- APP STARTUP INITIALIZATION START ---');
+
+      // 1. Load dotenv
+      debugPrint('   - Loading .env configuration...');
+      await dotenv.load(fileName: '.env');
+      debugPrint('   - .env configuration loaded successfully.');
+      
+      // 2. Initialize Firebase
+      debugPrint('   - Initializing Firebase...');
+      await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-    } catch (e) {
-      debugPrint('Firebase initialization failed: $e');
-      return null;
+      debugPrint('   - Firebase initialized successfully.');
+
+      // 3. Initialize dependency injection and Isar database
+      final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
+      final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? 'your_cloudinary_cloud_name';
+      
+      debugPrint('   - Initializing DI container and Isar...');
+      await di.init(
+        workerUrl: workerUrl,
+        cloudinaryCloudName: cloudName,
+      );
+      debugPrint('   - DI container and Isar initialized successfully.');
+
+      // 4. Initialize notifications asynchronously in background
+      debugPrint('   - Initializing notification system asynchronously...');
+      NotificationManager.init().then((_) {
+        debugPrint('   - Notification system initialized successfully.');
+      }).catchError((e) {
+        debugPrint('   - Notification system initialization failed: $e');
+      });
+
+      debugPrint('--- APP STARTUP INITIALIZATION COMPLETE ---');
+
+      if (mounted) {
+        setState(() {
+          _initialized = true;
+        });
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Initialization error: $e');
+      debugPrint('StackTrace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
     }
-  }();
+  }
 
-  // Wait for dotenv and Firebase to finish loading
-  await Future.wait([dotenvFuture, firebaseFuture]);
+  @override
+  Widget build(BuildContext context) {
+    if (_initialized) {
+      return const ProviderScope(
+        child: MyApp(),
+      );
+    }
 
-  final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
-  final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? 'your_cloudinary_cloud_name';
-
-  // Initialize dependencies (requires dotenv to be loaded)
-  await di.init(
-    workerUrl: workerUrl,
-    cloudinaryCloudName: cloudName,
-  );
-
-  // Ensure notification system has completed initialization
-  await initNotificationsFuture;
-
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF4834BF), // Matches splash color exactly
+        body: Center(
+          child: _error != null
+              ? Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 64, color: Colors.white),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Failed to initialize app',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _error = null;
+                          });
+                          _initApp();
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/icon/splash_icon.png',
+                      width: 180,
+                      height: 180,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.sync,
+                          size: 80,
+                          color: Colors.white,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    const SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 3.0,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends ConsumerStatefulWidget {
