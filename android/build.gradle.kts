@@ -38,7 +38,7 @@ subprojects {
                         }
                     }
                     // Force compileSdk for old plugins compiled against outdated API levels
-                    if (android.compileSdk != null && android.compileSdk!! < 34) {
+                    if (android.compileSdk != null && android.compileSdk!! < 36) {
                         android.compileSdk = 36
                     }
                 }

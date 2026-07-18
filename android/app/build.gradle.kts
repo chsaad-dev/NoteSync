@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.notesync.notesync"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     buildToolsVersion = "34.0.0"
     // ndkVersion = flutter.ndkVersion
 
