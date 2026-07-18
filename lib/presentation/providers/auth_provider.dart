@@ -2,8 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:isar/isar.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/di/injection_container.dart';
 import '../../core/security/session_manager.dart';
+import '../../core/security/encryption_service.dart';
+import '../../data/sync/sync_engine.dart';
 
 sealed class AuthState {
   const AuthState();
@@ -124,6 +128,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signOut() async {
     state = const AuthLoading();
     try {
+      // 1. Cancel in-flight sync operation immediately
+      if (sl.isRegistered<SyncEngine>()) {
+        sl<SyncEngine>().cancelSync();
+      }
+
+      // 2. Perform local wipe BEFORE Firebase sign out to capture current UID
+      final uid = _auth.currentUser?.uid;
+      if (uid != null) {
+        // Cancel revocation listener
+        await SessionManager.cancelRevocationListener();
+
+        // Wipe local Isar database notes
+        if (sl.isRegistered<Isar>()) {
+          final isar = sl<Isar>();
+          await isar.writeTxn(() async {
+            await isar.clear();
+          });
+        }
+
+        // Clear secure storage keys
+        final secureStorage = sl<FlutterSecureStorage>();
+        await secureStorage.delete(key: 'notesync_aes_key');
+        await secureStorage.delete(key: 'last_sync_timestamp_$uid');
+
+        // Clear cached key in EncryptionService
+        if (sl.isRegistered<EncryptionService>()) {
+          await sl<EncryptionService>().clearKey();
+        }
+      }
+
       await _googleSignIn.signOut();
       await _auth.signOut();
       state = const Unauthenticated();
@@ -135,4 +169,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(sl<fb.FirebaseAuth>());
+});
+
+final userIdProvider = Provider<String?>((ref) {
+  final authState = ref.watch(authProvider);
+  if (authState is Authenticated) {
+    return authState.user.uid;
+  }
+  return null;
 });

@@ -115,7 +115,7 @@ void main() {
       localIsarModel.mediaUrls = [];
       localIsarModel.ownerId = 'user123';
 
-      when(() => mockLocal.getNoteById('note_1')).thenAnswer((_) async => localIsarModel);
+      when(() => mockLocal.getNoteById('note_1', any())).thenAnswer((_) async => localIsarModel);
       when(() => mockLocal.saveNote(any())).thenAnswer((_) async {});
 
       await syncEngine.sync();
@@ -176,7 +176,7 @@ void main() {
       localIsarModel.mediaUrls = [];
       localIsarModel.ownerId = 'user123';
 
-      when(() => mockLocal.getNoteById('note_1')).thenAnswer((_) async => localIsarModel);
+      when(() => mockLocal.getNoteById('note_1', any())).thenAnswer((_) async => localIsarModel);
       when(() => mockLocal.saveNote(any())).thenAnswer((_) async {});
 
       await syncEngine.sync();

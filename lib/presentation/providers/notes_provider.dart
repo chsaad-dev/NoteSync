@@ -6,6 +6,7 @@ import '../../domain/entities/note_entity.dart';
 import '../../domain/repository/note_repository.dart';
 import '../../domain/usecases/watch_notes.dart';
 import '../../domain/usecases/watch_vault_notes.dart';
+import 'auth_provider.dart';
 
 // Search Query State
 final searchQueryProvider = StateProvider<String>((ref) => '');
@@ -18,18 +19,30 @@ final selectedFolderProvider = StateProvider<String?>((ref) => null);
 
 // Stream of all active (non-deleted) Notes from Local DB
 final notesStreamProvider = StreamProvider<List<NoteEntity>>((ref) {
+  final userId = ref.watch(userIdProvider);
+  if (userId == null) {
+    return Stream.value(<NoteEntity>[]);
+  }
   final watchNotes = sl<WatchNotes>();
   return watchNotes();
 });
 
 // Stream of all soft-deleted (Trash) Notes from Local DB
 final trashStreamProvider = StreamProvider<List<NoteEntity>>((ref) {
+  final userId = ref.watch(userIdProvider);
+  if (userId == null) {
+    return Stream.value(<NoteEntity>[]);
+  }
   final repo = sl<NoteRepository>();
   return repo.watchTrash();
 });
 
 // Stream of all Vault Notes from Local DB
 final vaultStreamProvider = StreamProvider<List<NoteEntity>>((ref) {
+  final userId = ref.watch(userIdProvider);
+  if (userId == null) {
+    return Stream.value(<NoteEntity>[]);
+  }
   final watchVault = sl<WatchVaultNotes>();
   return watchVault();
 });

@@ -24,6 +24,8 @@ import 'domain/repository/note_repository.dart';
 import 'presentation/screens/note_editor/note_editor_screen.dart';
 import 'package:home_widget/home_widget.dart';
 import 'presentation/providers/notes_provider.dart';
+import 'presentation/providers/editor_provider.dart';
+import 'presentation/providers/user_profile_provider.dart';
 import 'core/security/session_manager.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -330,6 +332,32 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final themeState = ref.watch(themeProvider);
     final authState = ref.watch(authProvider);
     final biometricState = ref.watch(biometricProvider);
+
+    // Listen for auth changes to invalidate providers and trigger immediate sync on login
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      final prevUid = previous is Authenticated ? previous.user.uid : null;
+      final nextUid = next is Authenticated ? next.user.uid : null;
+
+      if (prevUid != nextUid) {
+        // Invalidate all user-scoped providers
+        ref.invalidate(userIdProvider);
+        ref.invalidate(notesStreamProvider);
+        ref.invalidate(trashStreamProvider);
+        ref.invalidate(vaultStreamProvider);
+        ref.invalidate(userProfileProvider);
+        ref.invalidate(syncProvider);
+        ref.invalidate(noteEditorProvider);
+        ref.invalidate(searchQueryProvider);
+        ref.invalidate(selectedTagProvider);
+        ref.invalidate(selectedFolderProvider);
+
+        if (next is Authenticated) {
+          Future.microtask(() {
+            ref.read(syncProvider.notifier).syncNow();
+          });
+        }
+      }
+    });
 
     Widget homeWidget;
 

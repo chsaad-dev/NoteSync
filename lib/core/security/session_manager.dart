@@ -82,26 +82,30 @@ class SessionManager {
     String uid, 
     VoidCallback onRevoked,
   ) async {
-    await _sessionSubscription?.cancel();
-    final deviceId = await getDeviceId();
+    try {
+      await _sessionSubscription?.cancel();
+      final deviceId = await getDeviceId();
 
-    // Check if current device's session exists first, if it does, listen to it
-    final docRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('sessions')
-        .doc(deviceId);
-        
-    final initialCheck = await docRef.get();
-    if (initialCheck.exists) {
-      _sessionSubscription = docRef.snapshots().listen((snapshot) {
-        if (!snapshot.exists) {
-          debugPrint('Session revoked remotely for device ID: $deviceId');
-          onRevoked();
-        }
-      }, onError: (e) {
-        debugPrint('Session listener error: $e');
-      });
+      // Check if current device's session exists first, if it does, listen to it
+      final docRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('sessions')
+          .doc(deviceId);
+          
+      final initialCheck = await docRef.get();
+      if (initialCheck.exists) {
+        _sessionSubscription = docRef.snapshots().listen((snapshot) {
+          if (!snapshot.exists) {
+            debugPrint('Session revoked remotely for device ID: $deviceId');
+            onRevoked();
+          }
+        }, onError: (e) {
+          debugPrint('Session listener error: $e');
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to setup revocation listener: $e');
     }
   }
 

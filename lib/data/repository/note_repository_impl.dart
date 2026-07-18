@@ -4,6 +4,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../core/errors/failures.dart';
 import '../../core/errors/result.dart';
 import '../../core/security/encryption_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../core/di/injection_container.dart';
 import '../../domain/entities/note_entity.dart';
 import '../../domain/repository/note_repository.dart';
 import '../local/models/isar_note_model.dart';
@@ -111,7 +113,7 @@ class NoteRepositoryImpl implements NoteRepository {
   @override
   Future<Result<NoteEntity?>> getNoteById(String noteId) async {
     try {
-      final model = await _localDataSource.getNoteById(noteId);
+      final model = await _localDataSource.getNoteById(noteId, _currentUserId);
       if (model == null) return const Success(null);
       final decryptedBody = await _encryptionService.decrypt(model.encryptedBody, model.iv);
       return Success(model.toEntity(decryptedBody));
@@ -126,7 +128,7 @@ class NoteRepositoryImpl implements NoteRepository {
       final encryptedData = await _encryptionService.encrypt(note.body);
       
       final localModel = IsarNoteModel.fromEntity(
-        entity: note.copyWith(isSynced: false),
+        entity: note.copyWith(isSynced: false, ownerId: _currentUserId),
         encryptedBody: encryptedData.encryptedBase64,
         iv: encryptedData.ivBase64,
       );
@@ -157,9 +159,9 @@ class NoteRepositoryImpl implements NoteRepository {
             }
           }
         }
-        await _localDataSource.deleteNote(noteId);
+        await _localDataSource.deleteNote(noteId, _currentUserId);
       } else {
-        final model = await _localDataSource.getNoteById(noteId);
+        final model = await _localDataSource.getNoteById(noteId, _currentUserId);
         if (model != null) {
           model.isDeleted = true;
           model.isSynced = false;
@@ -207,9 +209,12 @@ class NoteRepositoryImpl implements NoteRepository {
   Future<Result<void>> deleteAccount() async {
     try {
       final token = await _getIdToken();
+      final uid = _currentUserId;
       await _remoteDataSource.deleteAccountOnWorker(token);
       await _localDataSource.clearAllData();
       await _encryptionService.clearKey();
+      final secureStorage = sl<FlutterSecureStorage>();
+      await secureStorage.delete(key: 'last_sync_timestamp_$uid');
       await _firebaseAuth.signOut();
       return const Success(null);
     } catch (e) {

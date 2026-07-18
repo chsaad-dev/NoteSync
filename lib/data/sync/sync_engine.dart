@@ -21,6 +21,8 @@ class SyncEngine {
   final FlutterSecureStorage _secureStorage;
   final Uuid _uuid = const Uuid();
 
+  String? _activeSyncUid;
+
   SyncEngine({
     required NoteLocalDataSource localDataSource,
     required NoteRemoteDataSource remoteDataSource,
@@ -38,25 +40,48 @@ class SyncEngine {
   String get _currentUserId => _firebaseAuth.currentUser?.uid ?? '';
   String _lastSyncKey(String uid) => 'last_sync_timestamp_$uid';
 
+  bool _isSyncCancelled(String syncUid) {
+    return _activeSyncUid == null || syncUid != _currentUserId;
+  }
+
+  void cancelSync() {
+    _activeSyncUid = null;
+  }
+
   Future<Result<void>> sync() async {
     final uid = _currentUserId;
     if (uid.isEmpty) {
       return FailureResult(const AuthFailure('User not authenticated'));
     }
 
+    _activeSyncUid = uid;
+
     try {
       // 1. Push Phase — returns set of noteIds that were successfully pushed
       final pushedNoteIds = await _pushLocalChanges(uid);
+      if (_isSyncCancelled(uid)) {
+        return FailureResult(const AuthFailure('Sync cancelled: User signed out or switched accounts'));
+      }
 
       // 2. Pull Phase — skips notes we just pushed to avoid false conflicts
       await _pullRemoteChanges(uid, pushedNoteIds);
+      if (_isSyncCancelled(uid)) {
+        return FailureResult(const AuthFailure('Sync cancelled: User signed out or switched accounts'));
+      }
 
       // 3. Purge Phase
       await _purgeDeletedNotes(uid);
 
       return const Success(null);
     } catch (e) {
+      if (_isSyncCancelled(uid)) {
+        return FailureResult(const AuthFailure('Sync cancelled: User signed out or switched accounts'));
+      }
       return FailureResult(ServerFailure('Sync failed: $e'));
+    } finally {
+      if (_activeSyncUid == uid) {
+        _activeSyncUid = null;
+      }
     }
   }
 
@@ -64,6 +89,7 @@ class SyncEngine {
     final pushedIds = <String>{};
     final unsynced = await _localDataSource.getUnsyncedNotes(uid);
     for (final model in unsynced) {
+      if (_isSyncCancelled(uid)) break;
       try {
         final decryptedBody = await _encryptionService.decrypt(model.encryptedBody, model.iv);
         final entity = model.toEntity(decryptedBody);
@@ -72,7 +98,9 @@ class SyncEngine {
         await _remoteDataSource.saveNote(uid, firestoreModel);
         pushedIds.add(model.noteId);
 
-        final currentLocal = await _localDataSource.getNoteById(model.noteId);
+        if (_isSyncCancelled(uid)) break;
+
+        final currentLocal = await _localDataSource.getNoteById(model.noteId, uid);
         if (currentLocal != null && currentLocal.updatedAt.isAtSameMomentAs(model.updatedAt)) {
           currentLocal.isSynced = true;
           await _localDataSource.saveNote(currentLocal);
@@ -91,13 +119,18 @@ class SyncEngine {
         : DateTime.fromMillisecondsSinceEpoch(0);
 
     final pullTime = DateTime.now();
+    if (_isSyncCancelled(uid)) return;
 
     final remoteNotes = await _remoteDataSource.getNotesModifiedSince(uid, lastSync);
     for (final remoteNote in remoteNotes) {
-      final localModel = await _localDataSource.getNoteById(remoteNote.noteId);
+      if (_isSyncCancelled(uid)) return;
+      final localModel = await _localDataSource.getNoteById(remoteNote.noteId, uid);
+      if (_isSyncCancelled(uid)) return;
+
       if (localModel == null) {
         // New note from remote — save locally
         final encrypted = await _encryptionService.encrypt(remoteNote.body);
+        if (_isSyncCancelled(uid)) return;
         final newLocalModel = IsarNoteModel.fromEntity(
           entity: remoteNote.toEntity(),
           encryptedBody: encrypted.encryptedBase64,
@@ -122,6 +155,7 @@ class SyncEngine {
           // Local has unsaved changes AND remote has changes.
           // Check if the content is actually different before creating a conflict.
           final localDecrypted = await _encryptionService.decrypt(localModel.encryptedBody, localModel.iv);
+          if (_isSyncCancelled(uid)) return;
           final bool sameContent = localModel.title == remoteNote.title &&
               localDecrypted == remoteNote.body &&
               localModel.isDeleted == remoteNote.isDeleted &&
@@ -143,6 +177,7 @@ class SyncEngine {
                 isSynced: false,
               );
               final encryptedConflict = await _encryptionService.encrypt(conflictNote.body);
+              if (_isSyncCancelled(uid)) return;
               final conflictModel = IsarNoteModel.fromEntity(
                 entity: conflictNote,
                 encryptedBody: encryptedConflict.encryptedBase64,
@@ -151,6 +186,7 @@ class SyncEngine {
               await _localDataSource.saveNote(conflictModel);
 
               final encryptedRemote = await _encryptionService.encrypt(remoteNote.body);
+              if (_isSyncCancelled(uid)) return;
               final updatedLocal = IsarNoteModel.fromEntity(
                 entity: remoteNote.toEntity(),
                 encryptedBody: encryptedRemote.encryptedBase64,
@@ -163,6 +199,7 @@ class SyncEngine {
         } else {
           // Local is already synced — overwrite with remote version
           final encrypted = await _encryptionService.encrypt(remoteNote.body);
+          if (_isSyncCancelled(uid)) return;
           final updatedLocal = IsarNoteModel.fromEntity(
             entity: remoteNote.toEntity(),
             encryptedBody: encrypted.encryptedBase64,
@@ -173,6 +210,7 @@ class SyncEngine {
       }
     }
 
+    if (_isSyncCancelled(uid)) return;
     await _secureStorage.write(key: _lastSyncKey(uid), value: pullTime.toIso8601String());
   }
 
@@ -184,8 +222,10 @@ class SyncEngine {
 
     final List<String> idsToPurge = [];
     final token = await _firebaseAuth.currentUser?.getIdToken() ?? '';
+    if (_isSyncCancelled(uid)) return;
 
     for (final model in oldDeletedNotes) {
+      if (_isSyncCancelled(uid)) return;
       idsToPurge.add(model.noteId);
       for (final url in model.mediaUrls) {
         try {
@@ -197,6 +237,7 @@ class SyncEngine {
       } catch (_) {}
     }
 
-    await _localDataSource.hardDeleteNotes(idsToPurge);
+    if (_isSyncCancelled(uid)) return;
+    await _localDataSource.hardDeleteNotes(idsToPurge, uid);
   }
 }

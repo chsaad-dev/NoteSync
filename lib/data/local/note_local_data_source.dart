@@ -122,13 +122,18 @@ class NoteLocalDataSource {
         .findAll();
   }
 
-  Future<IsarNoteModel?> getNoteById(String noteId) async {
+  Future<IsarNoteModel?> getNoteById(String noteId, String ownerId) async {
     if (kIsWeb || _isar == null) {
-      return _webNotes[noteId];
+      final note = _webNotes[noteId];
+      if (note != null && note.ownerId == ownerId) {
+        return note;
+      }
+      return null;
     }
     return await _isar!.isarNoteModels
         .filter()
         .noteIdEqualTo(noteId)
+        .ownerIdEqualTo(ownerId)
         .findFirst();
   }
 
@@ -143,7 +148,7 @@ class NoteLocalDataSource {
     }
     await _isar!.writeTxn(() async {
       // Find existing by noteId to preserve local auto-increment id
-      final existing = await getNoteById(model.noteId);
+      final existing = await getNoteById(model.noteId, model.ownerId);
       if (existing != null) {
         model.id = existing.id;
       }
@@ -164,7 +169,7 @@ class NoteLocalDataSource {
     }
     await _isar!.writeTxn(() async {
       for (var model in models) {
-        final existing = await getNoteById(model.noteId);
+        final existing = await getNoteById(model.noteId, model.ownerId);
         if (existing != null) {
           model.id = existing.id;
         }
@@ -173,14 +178,17 @@ class NoteLocalDataSource {
     });
   }
 
-  Future<void> deleteNote(String noteId) async {
+  Future<void> deleteNote(String noteId, String ownerId) async {
     if (kIsWeb || _isar == null) {
-      _webNotes.remove(noteId);
+      final note = _webNotes[noteId];
+      if (note != null && note.ownerId == ownerId) {
+        _webNotes.remove(noteId);
+      }
       _streamController.add(null);
       return;
     }
     await _isar!.writeTxn(() async {
-      final existing = await getNoteById(noteId);
+      final existing = await getNoteById(noteId, ownerId);
       if (existing != null) {
         await _isar!.isarNoteModels.delete(existing.id!);
       }
@@ -214,17 +222,20 @@ class NoteLocalDataSource {
         .findAll();
   }
 
-  Future<void> hardDeleteNotes(List<String> noteIds) async {
+  Future<void> hardDeleteNotes(List<String> noteIds, String ownerId) async {
     if (kIsWeb || _isar == null) {
       for (final noteId in noteIds) {
-        _webNotes.remove(noteId);
+        final note = _webNotes[noteId];
+        if (note != null && note.ownerId == ownerId) {
+          _webNotes.remove(noteId);
+        }
       }
       _streamController.add(null);
       return;
     }
     await _isar!.writeTxn(() async {
       for (final noteId in noteIds) {
-        final existing = await getNoteById(noteId);
+        final existing = await getNoteById(noteId, ownerId);
         if (existing != null) {
           await _isar!.isarNoteModels.delete(existing.id!);
         }
