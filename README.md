@@ -184,7 +184,7 @@ NoteSync strictly adheres to **Clean Architecture** principles decoupled into do
 
 #### 1. Clone & Install Flutter Packages
 ```bash
-git clone https://github.com/chsaa/NoteSync.git
+git clone https://github.com/chsaad-dev/NoteSync.git
 cd NoteSync
 flutter pub get
 ```
@@ -310,4 +310,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Author
 
-*   **Muhammad Saad** - [GitHub Profile](https://github.com/chsaa)
+*   **Muhammad Saad** - [GitHub Profile](https://github.com/chsaad-dev)
