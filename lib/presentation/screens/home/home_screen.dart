@@ -14,6 +14,7 @@ import '../trash/trash_screen.dart';
 import '../folders/folders_manager_screen.dart';
 import '../vault/vault_screen.dart';
 import '../../providers/biometric_provider.dart';
+import '../../providers/user_profile_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -27,6 +28,7 @@ class HomeScreen extends ConsumerWidget {
     final selectedFolder = ref.watch(selectedFolderProvider);
     final syncState = ref.watch(syncProvider);
     final authState = ref.watch(authProvider);
+    final userProfileAsync = ref.watch(userProfileProvider);
 
     // Group notes into pinned and unpinned
     final pinnedNotes = filteredNotes.where((note) => note.isPinned).toList();
@@ -44,21 +46,124 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            UserAccountsDrawerHeader(
-              accountName: const Text('NoteSync User', style: TextStyle(fontWeight: FontWeight.bold)),
-              accountEmail: Text(
-                authState is Authenticated ? authState.user.email ?? '' : 'Offline Mode',
+            userProfileAsync.when(
+              data: (profile) {
+                final displayName = profile?.displayName.isNotEmpty == true 
+                    ? profile!.displayName 
+                    : 'NoteSync User';
+                final email = profile?.email ?? (authState is Authenticated ? authState.user.email ?? '' : 'Offline Mode');
+                final fallbackInitials = (displayName.isNotEmpty ? displayName : email)
+                    .substring(0, 1)
+                    .toUpperCase();
+                
+                final hasPhoto = profile?.photoUrl != null;
+
+                return UserAccountsDrawerHeader(
+                  accountName: Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  accountEmail: Text(email),
+                  currentAccountPicture: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    child: ClipOval(
+                      child: hasPhoto
+                          ? Image.network(
+                              profile!.photoUrl!,
+                              width: 72,
+                              height: 72,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    width: 72,
+                                    height: 72,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Theme.of(context).colorScheme.primary,
+                                          Theme.of(context).colorScheme.secondary,
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      fallbackInitials,
+                                      style: const TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                            )
+                          : Container(
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Theme.of(context).colorScheme.primary,
+                                    Theme.of(context).colorScheme.secondary,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                fallbackInitials,
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              loading: () => UserAccountsDrawerHeader(
+                accountName: const Text('Loading...', style: TextStyle(fontWeight: FontWeight.bold)),
+                accountEmail: Text(
+                  authState is Authenticated ? authState.user.email ?? '' : 'Offline Mode',
+                ),
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  child: const CircularProgressIndicator(),
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                    ],
+                  ),
+                ),
               ),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Icon(Icons.person, color: Theme.of(context).colorScheme.primary, size: 40),
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                  ],
+              error: (err, stack) => UserAccountsDrawerHeader(
+                accountName: const Text('NoteSync User', style: TextStyle(fontWeight: FontWeight.bold)),
+                accountEmail: Text(
+                  authState is Authenticated ? authState.user.email ?? '' : 'Offline Mode',
+                ),
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  child: Icon(Icons.person, color: Theme.of(context).colorScheme.primary, size: 40),
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                    ],
+                  ),
                 ),
               ),
             ),

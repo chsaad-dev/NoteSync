@@ -9,6 +9,7 @@ import '../../../core/di/injection_container.dart';
 import '../../../domain/usecases/delete_account.dart';
 import 'active_sessions_screen.dart';
 import 'backup_restore_screen.dart';
+import 'edit_profile_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -150,6 +151,127 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          // Section: User Profile Header
+          userProfileAsync.when(
+            data: (profile) {
+              if (profile == null) return const SizedBox.shrink();
+              final email = profile.email;
+              final fallbackInitials = (profile.displayName.isNotEmpty ? profile.displayName : email)
+                  .substring(0, 1)
+                  .toUpperCase();
+
+              return Column(
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 32,
+                            backgroundColor: Colors.transparent,
+                            child: ClipOval(
+                              child: profile.photoUrl != null
+                                  ? Image.network(
+                                      profile.photoUrl!,
+                                      width: 64,
+                                      height: 64,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Container(
+                                            width: 64,
+                                            height: 64,
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Theme.of(context).colorScheme.primary,
+                                                  Theme.of(context).colorScheme.secondary,
+                                                ],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              ),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              fallbackInitials,
+                                              style: const TextStyle(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                    )
+                                  : Container(
+                                      width: 64,
+                                      height: 64,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Theme.of(context).colorScheme.primary,
+                                            Theme.of(context).colorScheme.secondary,
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        fallbackInitials,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  profile.displayName.isNotEmpty ? profile.displayName : 'NoteSync User',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  email,
+                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: 'Edit Profile',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              );
+            },
+            loading: () => const Padding(
+              padding: EdgeInsets.only(bottom: 24.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (err, stack) => const SizedBox.shrink(),
+          ),
           // Section: Aesthetics & Behavior
           const Text(
             'APPEARANCE & SECURITY',
@@ -369,6 +491,19 @@ class SettingsScreen extends ConsumerWidget {
           Card(
             child: Column(
               children: [
+                ListTile(
+                  leading: const Icon(Icons.person_outline),
+                  title: const Text('Edit Profile'),
+                  subtitle: const Text('Update your name and photo'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.email_outlined),
                   title: const Text('Logged in as'),

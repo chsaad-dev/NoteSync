@@ -13,9 +13,12 @@ final userProfileProvider = StreamProvider<UserProfile?>((ref) {
         .snapshots()
         .map((snapshot) {
           if (!snapshot.exists || snapshot.data() == null) {
+            final email = authState.user.email ?? '';
+            final fallbackName = email.split('@').first;
             return UserProfile(
               uid: uid,
-              email: authState.user.email ?? '',
+              email: email,
+              displayName: fallbackName.isNotEmpty ? fallbackName : 'User',
               usedStorage: 0,
               maxStorage: 314572800, // Default 300MB
             );
