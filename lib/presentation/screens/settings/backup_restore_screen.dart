@@ -29,47 +29,49 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Export Backup'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Enter a secure password to encrypt your backup ZIP. '
-                'You will need this exact password to restore your notes later.',
-                style: TextStyle(fontSize: 13, color: Colors.black87),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Enter a secure password to encrypt your backup ZIP. '
+                  'You will need this exact password to restore your notes later.',
+                  style: TextStyle(fontSize: 13, color: Colors.black87),
                 ),
-                validator: (val) {
-                  if (val == null || val.length < 6) {
-                    return 'Password must be at least 6 characters';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: confirmController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    return null;
+                  },
                 ),
-                validator: (val) {
-                  if (val != passwordController.text) {
-                    return 'Passwords do not match';
-                  }
-                  return null;
-                },
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: confirmController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (val) {
+                    if (val != passwordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -82,6 +84,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               if (formKey.currentState?.validate() ?? false) {
                 Navigator.pop(context); // Close dialog
                 _showLoading(true);
+                await Future.delayed(const Duration(milliseconds: 100));
 
                 try {
                   final backupService = sl<BackupService>();
@@ -144,31 +147,33 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Import Backup'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Enter the password used to encrypt this backup file to decrypt and restore your notes.',
-                  style: TextStyle(fontSize: 13, color: Colors.black87),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Backup Password',
-                    border: OutlineInputBorder(),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter the password used to encrypt this backup file to decrypt and restore your notes.',
+                    style: TextStyle(fontSize: 13, color: Colors.black87),
                   ),
-                  validator: (val) {
-                    if (val == null || val.isEmpty) {
-                      return 'Password is required';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Backup Password',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                        return 'Password is required';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -181,6 +186,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                 if (formKey.currentState?.validate() ?? false) {
                   Navigator.pop(context); // Close password dialog
                   _showLoading(true);
+                  await Future.delayed(const Duration(milliseconds: 100));
 
                   try {
                     final backupService = sl<BackupService>();
@@ -376,11 +382,16 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             ],
           ),
           if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+            Stack(
+              children: [
+                const ModalBarrier(
+                  dismissible: false,
+                  color: Colors.black38,
+                ),
+                const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ],
             ),
         ],
       ),

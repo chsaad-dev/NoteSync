@@ -246,7 +246,10 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
       final publicUrlId = const Uuid().v4();
       final contentHtml = QuillHelper.toHtml(currentNote.body);
 
-      final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
+      final rawWorkerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
+      final workerUrl = rawWorkerUrl.endsWith('/') 
+          ? rawWorkerUrl.substring(0, rawWorkerUrl.length - 1) 
+          : rawWorkerUrl;
       final response = await http.post(
         Uri.parse('$workerUrl/publish-note'),
         headers: {
@@ -291,7 +294,10 @@ class NoteEditorNotifier extends StateNotifier<NoteEditorState> {
       if (user == null) throw Exception('User not authenticated');
       final idToken = await user.getIdToken();
 
-      final workerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
+      final rawWorkerUrl = dotenv.env['CLOUDFLARE_WORKER_URL'] ?? 'https://your-worker-url.workers.dev';
+      final workerUrl = rawWorkerUrl.endsWith('/') 
+          ? rawWorkerUrl.substring(0, rawWorkerUrl.length - 1) 
+          : rawWorkerUrl;
       final response = await http.post(
         Uri.parse('$workerUrl/unpublish-note'),
         headers: {

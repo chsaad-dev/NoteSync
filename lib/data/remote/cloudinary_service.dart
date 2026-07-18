@@ -6,6 +6,10 @@ import 'package:path/path.dart' as p;
 class CloudinaryService {
   final String _workerUrl;
 
+  String get _normalizedWorkerUrl => _workerUrl.endsWith('/') 
+      ? _workerUrl.substring(0, _workerUrl.length - 1) 
+      : _workerUrl;
+
   CloudinaryService(this._workerUrl, [String? _]);
 
   String? _extractPublicId(String url) {
@@ -43,7 +47,7 @@ class CloudinaryService {
 
     final fileSize = await file.length();
     final signResponse = await http.post(
-      Uri.parse('$_workerUrl/sign-upload'),
+      Uri.parse('$_normalizedWorkerUrl/sign-upload'),
       headers: {
         'Authorization': 'Bearer $idToken',
         'Content-Type': 'application/json',
@@ -96,7 +100,7 @@ class CloudinaryService {
 
     // Call commit endpoint on Worker to register server-side storage usage increment
     final commitResponse = await http.post(
-      Uri.parse('$_workerUrl/commit-upload'),
+      Uri.parse('$_normalizedWorkerUrl/commit-upload'),
       headers: {
         'Authorization': 'Bearer $idToken',
         'Content-Type': 'application/json',
@@ -132,7 +136,7 @@ class CloudinaryService {
     }
 
     final deleteResponse = await http.post(
-      Uri.parse('$_workerUrl/delete-media'),
+      Uri.parse('$_normalizedWorkerUrl/delete-media'),
       headers: {
         'Authorization': 'Bearer $idToken',
         'Content-Type': 'application/json',

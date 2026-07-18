@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:archive/archive.dart';
 import 'package:pointycastle/export.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:notesync/core/errors/result.dart';
 import 'package:notesync/domain/entities/note_entity.dart';
 import 'package:notesync/domain/repository/note_repository.dart';
-import 'package:notesync/core/services/backup_service.dart';
 
 class FakeNoteRepository implements NoteRepository {
   final List<NoteEntity> notes = [];
@@ -54,11 +52,9 @@ class FakeNoteRepository implements NoteRepository {
 void main() {
   group('BackupService Crypto & Model Tests', () {
     late FakeNoteRepository fakeRepository;
-    late BackupService backupService;
 
     setUp(() {
       fakeRepository = FakeNoteRepository();
-      backupService = BackupService(fakeRepository);
     });
 
     test('Verify PBKDF2 with 600,000 iterations and AES-CBC encrypt/decrypt pipeline', () async {

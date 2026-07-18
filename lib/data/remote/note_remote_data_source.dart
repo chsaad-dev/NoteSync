@@ -6,6 +6,10 @@ class NoteRemoteDataSource {
   final FirebaseFirestore _firestore;
   final String _workerUrl;
 
+  String get _normalizedWorkerUrl => _workerUrl.endsWith('/') 
+      ? _workerUrl.substring(0, _workerUrl.length - 1) 
+      : _workerUrl;
+
   NoteRemoteDataSource(this._firestore, this._workerUrl);
 
   CollectionReference<Map<String, dynamic>> _notesRef(String uid) {
@@ -35,7 +39,7 @@ class NoteRemoteDataSource {
 
   Future<void> deleteAccountOnWorker(String idToken) async {
     final response = await http.post(
-      Uri.parse('$_workerUrl/delete-account'),
+      Uri.parse('$_normalizedWorkerUrl/delete-account'),
       headers: {
         'Authorization': 'Bearer $idToken',
       },

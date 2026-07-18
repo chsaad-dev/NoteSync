@@ -18,11 +18,12 @@ export default {
     try {
       const url = new URL(request.url);
       const firebaseProjectId = env.FIREBASE_PROJECT_ID;
+      const pathname = url.pathname.replace(/\/+/g, '/');
 
       // --- Bypassed Routes ---
       // GET /public/note/:publicUrlId
-      if (url.pathname.startsWith('/public/note/') && request.method === 'GET') {
-        const publicUrlId = url.pathname.split('/public/note/')[1];
+      if (pathname.startsWith('/public/note/') && request.method === 'GET') {
+        const publicUrlId = pathname.split('/public/note/')[1];
         if (!publicUrlId || publicUrlId.trim() === '') {
           return new Response('Note Not Found', { status: 404, headers: corsHeaders });
         }
@@ -210,12 +211,12 @@ export default {
 
       // Fetch service account access token for administrative calls
       const serviceAccountToken = await getServiceAccountToken(
-        env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL,
-        env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
+        env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL || env.CLIENT_EMAIL,
+        env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY || env.SERVICE_ACCOUNT_PRIVATE_KEY
       );
 
       // 5. Route Handling
-      if (url.pathname === '/sign-upload') {
+      if (pathname === '/sign-upload') {
         const body = await request.json().catch(() => ({}));
         const fileSize = parseInt(body.fileSize, 10) || 0;
 
@@ -252,7 +253,7 @@ export default {
               maxStorage: { integerValue: defaultMaxStorageBytes.toString() }
             }
           };
-          await fetch(userProfileUrl, {
+          await fetch(`${userProfileUrl}?updateMask.fieldPaths=email&updateMask.fieldPaths=usedStorage&updateMask.fieldPaths=maxStorage`, {
             method: 'PATCH',
             headers: {
               'Authorization': `Bearer ${serviceAccountToken}`,
@@ -307,7 +308,7 @@ export default {
         );
       }
 
-      if (url.pathname === '/commit-upload') {
+      if (pathname === '/commit-upload') {
         if (request.method !== 'POST') {
           return new Response('Method not allowed', { status: 405, headers: corsHeaders });
         }
@@ -348,7 +349,7 @@ export default {
           }
         };
 
-        await fetch(userProfileUrl, {
+        await fetch(`${userProfileUrl}?updateMask.fieldPaths=email&updateMask.fieldPaths=usedStorage&updateMask.fieldPaths=maxStorage`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${serviceAccountToken}`,
@@ -363,7 +364,7 @@ export default {
         });
       }
 
-      if (url.pathname === '/delete-media') {
+      if (pathname === '/delete-media') {
         if (request.method !== 'POST') {
           return new Response('Method not allowed', { status: 405, headers: corsHeaders });
         }
@@ -432,7 +433,7 @@ export default {
               }
             };
 
-            await fetch(userProfileUrl, {
+            await fetch(`${userProfileUrl}?updateMask.fieldPaths=email&updateMask.fieldPaths=usedStorage&updateMask.fieldPaths=maxStorage`, {
               method: 'PATCH',
               headers: {
                 'Authorization': `Bearer ${serviceAccountToken}`,
@@ -449,7 +450,7 @@ export default {
         });
       }
 
-      if (url.pathname === '/publish-note') {
+      if (pathname === '/publish-note') {
         if (request.method !== 'POST') {
           return new Response('Method not allowed', { status: 405, headers: corsHeaders });
         }
@@ -493,7 +494,7 @@ export default {
           }
         };
 
-        const publishResp = await fetch(publicNoteUrl, {
+        const publishResp = await fetch(`${publicNoteUrl}?updateMask.fieldPaths=title&updateMask.fieldPaths=contentHtml&updateMask.fieldPaths=mediaUrls&updateMask.fieldPaths=createdAt`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${serviceAccountToken}`,
@@ -516,7 +517,7 @@ export default {
         });
       }
 
-      if (url.pathname === '/unpublish-note') {
+      if (pathname === '/unpublish-note') {
         if (request.method !== 'POST') {
           return new Response('Method not allowed', { status: 405, headers: corsHeaders });
         }
@@ -567,7 +568,7 @@ export default {
         });
       }
 
-      if (url.pathname === '/delete-account') {
+      if (pathname === '/delete-account') {
         if (request.method !== 'POST') {
           return new Response('Method not allowed', { status: 405, headers: corsHeaders });
         }
