@@ -15,7 +15,7 @@ extension GetIsarNoteModelCollection on Isar {
 
 const IsarNoteModelSchema = CollectionSchema(
   name: r'IsarNoteModel',
-  id: 3100578282153100694,
+  id: 3100578282 * 1000000000 + 153100694,
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -110,7 +110,7 @@ const IsarNoteModelSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'noteId': IndexSchema(
-      id: -9014133502494436840,
+      id: -9014133502 * 1000000000 - 494436840,
       name: r'noteId',
       unique: true,
       replace: true,
