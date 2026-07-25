@@ -68,5 +68,45 @@ void main() {
       expect(dec1, equals(first));
       expect(dec2, equals(second));
     });
+
+    test('should encrypt and decrypt an empty string without throwing', () async {
+      const original = '';
+
+      final encryptedData = await encryptionService.encrypt(original);
+
+      expect(encryptedData.encryptedBase64, isNotEmpty);
+      expect(encryptedData.ivBase64, isNotEmpty);
+
+      final decrypted = await encryptionService.decrypt(
+        encryptedData.encryptedBase64,
+        encryptedData.ivBase64,
+      );
+
+      expect(decrypted, equals(original));
+    });
+
+    test('should encrypt and decrypt a single character without throwing', () async {
+      const original = 'a';
+
+      final encryptedData = await encryptionService.encrypt(original);
+      final decrypted = await encryptionService.decrypt(
+        encryptedData.encryptedBase64,
+        encryptedData.ivBase64,
+      );
+
+      expect(decrypted, equals(original));
+    });
+
+    test('should encrypt and decrypt a 3-character string without throwing', () async {
+      const original = 'abc';
+
+      final encryptedData = await encryptionService.encrypt(original);
+      final decrypted = await encryptionService.decrypt(
+        encryptedData.encryptedBase64,
+        encryptedData.ivBase64,
+      );
+
+      expect(decrypted, equals(original));
+    });
   });
 }
