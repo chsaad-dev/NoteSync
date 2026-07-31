@@ -37,8 +37,10 @@ class AuthError extends AuthState {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final fb.FirebaseAuth _auth;
+  static const String _webClientId = '608360411758-8j75tt0990rdjuudlc1cgq0e6p8mo075.apps.googleusercontent.com';
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: kIsWeb ? '608360411758-8j75tt0990rdjuudlc1cgq0e6p8mo075.apps.googleusercontent.com' : null,
+    serverClientId: _webClientId,
+    clientId: kIsWeb ? _webClientId : null,
   );
 
   AuthNotifier(this._auth) : super(const AuthInitial()) {
